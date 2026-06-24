@@ -3,15 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>City Record Money Map — follow an NYC RFP from notice to dollars</title>
+<title>City Record, Decoded — the money, the people, the land</title>
 <style>
   :root{
     --paper:#f6f2ea; --ink:#1a1714; --muted:#6b6256; --rule:#d8cfbe;
     --card:#fffdf8; --shadow:0 1px 2px rgba(40,30,10,.06),0 8px 24px rgba(40,30,10,.06);
-    --blue:#1f5f9e;   /* the mechanism / solicitation */
-    --amber:#b5781b;  /* money / award */
-    --green:#2e7d4f;  /* awarded / closed */
-    --rose:#9e3b2f;   /* caution / pending / closed */
+    --blue:#1f5f9e; --amber:#b5781b; --green:#2e7d4f; --rose:#9e3b2f;
     --maxw:1120px;
   }
   *{box-sizing:border-box}
@@ -19,23 +16,29 @@
   body{background:var(--paper);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
   a{color:var(--blue)}
+  code{font:12px/1 ui-monospace,Menlo,monospace;background:#efe8d8;padding:1px 5px;border-radius:4px}
 
-  /* masthead */
+  /* masthead + tabs */
   header.masthead{border-bottom:3px double var(--ink);background:linear-gradient(#fbf8f1,#f6f2ea)}
-  .masthead .wrap{padding:26px 22px 18px}
+  .masthead .wrap{padding:26px 22px 16px}
   .kicker{text-align:center;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.28em;text-transform:uppercase;color:var(--muted)}
-  h1.title{font:800 clamp(34px,6vw,62px)/.95 "Times New Roman",Georgia,serif;letter-spacing:-.01em;text-align:center;margin:.18em 0 .1em}
-  .subtitle{text-align:center;font-style:italic;color:var(--muted);margin:0 0 14px;font-size:clamp(15px,2.3vw,19px)}
-  .deck{max-width:780px;margin:0 auto;text-align:center;color:#4a4338}
+  h1.title{font:800 clamp(32px,6vw,58px)/.95 "Times New Roman",Georgia,serif;letter-spacing:-.01em;text-align:center;margin:.18em 0 .08em}
+  .subtitle{text-align:center;font-style:italic;color:var(--muted);margin:0 0 16px;font-size:clamp(15px,2.3vw,19px)}
+  .tabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .tabbtn{font:600 13px/1 ui-sans-serif,system-ui,sans-serif;padding:10px 17px;border-radius:999px;border:1px solid var(--rule);background:var(--card);color:var(--muted);cursor:pointer}
+  .tabbtn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .tabpane{display:none;padding:24px 0 10px}
+  .tabpane.active{display:block}
+  .deck{max-width:820px;margin:0 auto 4px;text-align:center;color:#4a4338}
   .deck b{color:var(--ink)}
-  .stagepill{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:14px 0 2px;font:600 12px/1 ui-sans-serif,system-ui,sans-serif}
+  .stagepill{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0 2px;font:600 12px/1 ui-sans-serif,system-ui,sans-serif;width:100%}
   .stagepill span{padding:5px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--card)}
   .stagepill .arrow{border:none;background:none;color:var(--muted);padding:0}
   .dot{width:9px;height:9px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:5px}
+  .center{text-align:center}
 
   /* controls */
-  section.tool{padding:24px 0 10px}
-  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-top:18px}
   .field{display:flex;flex-direction:column;gap:5px;flex:1 1 150px}
   .field.kw{flex:2 1 220px}
   .field label{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -51,7 +54,6 @@
   .panel h2{font:700 13px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0;padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center;gap:8px}
   .panel h2 .count{font-weight:600;color:var(--blue);letter-spacing:0;text-transform:none}
 
-  /* results list */
   .list{max-height:660px;overflow:auto}
   .row{padding:13px 16px;border-bottom:1px solid var(--rule);cursor:pointer;transition:background .12s}
   .row:hover{background:#f4eee2}
@@ -66,14 +68,13 @@
   .tag.closed{background:#f6e7e4;color:var(--rose)}
   .tag.amt{background:#fbf0dc;color:#8a5c12}
 
-  /* detail */
   .detail{padding:18px 18px 22px;min-height:320px}
   .empty{color:var(--muted);font-style:italic;padding:40px 18px;text-align:center}
   .agencybar{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;padding:14px 16px;border:1px solid var(--rule);border-radius:12px;background:#fbf6ea;margin-bottom:16px}
-  .agencybar .big{font:800 26px/1 "Times New Roman",serif;color:var(--amber)}
+  .agencybar .big{font:800 24px/1.05 "Times New Roman",serif;color:var(--amber)}
   .agencybar .lbl{font:600 11px/1.3 ui-sans-serif,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 
-  /* apply panel */
+  /* apply panel (money) */
   .apply{border:1px solid var(--blue);border-radius:12px;background:#fff;margin-bottom:16px;overflow:hidden}
   .apply h3{font:700 12px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--blue);margin:0;padding:10px 14px}
   .apply .body{padding:14px}
@@ -88,7 +89,7 @@
   .scope{font-size:14.5px;line-height:1.6;color:#3f3930;background:#faf6ee;border:1px solid var(--rule);border-radius:10px;padding:13px 15px;margin-top:16px}
   .scope .lbl{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
 
-  /* chain */
+  /* chain (money) */
   .chain-h{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
   .chain{display:flex;gap:0;flex-wrap:wrap;align-items:stretch}
   .stage{flex:1 1 220px;min-width:200px;display:flex;align-items:stretch}
@@ -106,37 +107,69 @@
   .note{font:13px/1.5 ui-sans-serif,system-ui,sans-serif;color:var(--muted);background:#f4eee2;border-left:3px solid var(--rule);padding:10px 12px;border-radius:0 8px 8px 0;margin-top:14px}
   .note.warn{border-left-color:var(--rose)}
 
+  /* people lens */
+  .rolename{font:800 22px/1.15 "Times New Roman",serif;margin-bottom:8px}
+  .badges{margin-bottom:14px}
+  .ladder{display:flex;flex-direction:column;gap:7px}
+  .lrow{display:grid;grid-template-columns:1fr 120px auto;gap:12px;align-items:center;font-size:13px}
+  .lrow .lname{line-height:1.25}
+  .lbar{background:#efe8d8;border-radius:6px;height:13px;overflow:hidden}
+  .lbar span{display:block;height:100%;background:var(--amber)}
+  .lrow.me{font-weight:700}
+  .lrow.me .lbar span{background:var(--green)}
+  .lval{font:700 13px/1 ui-monospace,Menlo,monospace;color:#5a5142;text-align:right}
+  .rmeta2{font-size:13px;color:#4a4338;margin:2px 0 4px}
+  .timeline{display:flex;flex-direction:column;gap:8px}
+  .tl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;padding:8px 11px;border:1px solid var(--rule);border-radius:9px;background:#fff}
+  .tldate{font:600 12px/1 ui-sans-serif,system-ui,sans-serif;color:var(--muted);min-width:92px}
+  .tlreason{font-weight:700}
+  .tlsal{font:700 13px/1 "Times New Roman",serif;color:var(--green)}
+
+  /* land stub */
+  .landcard{background:var(--card);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow);padding:22px;margin-top:18px}
+  .landcard h3{font:700 13px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .example{background:#faf6ee;border:1px solid var(--rule);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .example .leg{font-style:italic;color:var(--muted)}
+  .example .arrow{display:block;text-align:center;color:var(--amber);font-weight:700;margin:6px 0}
+  .roadmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+  .rm{border:1px solid var(--rule);border-radius:10px;padding:13px 14px;background:#fff}
+  .rm b{display:block;margin-bottom:4px}
+  .rm.done{border-left:3px solid var(--green)}
+
   .loading{display:inline-block;width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
   footer{border-top:3px double var(--ink);margin-top:46px;padding:26px 0 60px;font:13px/1.6 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
   footer h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px;color:var(--ink)}
   .caveat{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;margin-top:14px}
-  code{font:12px/1 ui-monospace,Menlo,monospace;background:#efe8d8;padding:1px 5px;border-radius:4px}
 </style>
 </head>
 <body>
 <header class="masthead">
   <div class="wrap">
     <div class="kicker">Built on The City Record · Official Journal of the City of New York</div>
-    <h1 class="title">City Record Money Map</h1>
-    <p class="subtitle">Every NYC contract is born as a notice. This follows one from RFP to dollars.</p>
-    <p class="deck">A consultant reading a <b>Request for Proposals</b> sees one isolated notice — not how to respond,
-      how much the agency actually moves, who won last time, or whether an award ever landed. This reads
-      <b>The City Record</b> live and stitches the scattered notices for a single procurement (linked by their <b>PIN</b>)
-      back into one chain.</p>
-    <div class="stagepill">
-      <span><i class="dot" style="background:var(--blue)"></i>Solicitation (RFP)</span>
-      <span class="arrow">→</span>
-      <span><i class="dot" style="background:var(--amber)"></i>Intent to Award</span>
-      <span class="arrow">→</span>
-      <span><i class="dot" style="background:var(--green)"></i>Award ($)</span>
-    </div>
+    <h1 class="title">City Record, Decoded</h1>
+    <p class="subtitle">NYC publishes everything it does as legal notices nobody can read. This makes three of them legible.</p>
+    <nav class="tabs">
+      <button class="tabbtn active" data-tab="money">Money — contracts</button>
+      <button class="tabbtn" data-tab="people">People — pay &amp; titles</button>
+      <button class="tabbtn" data-tab="land">Land — rezonings</button>
+    </nav>
   </div>
 </header>
 
-<section class="tool">
+<!-- ============ MONEY ============ -->
+<section id="tab-money" class="tabpane active">
   <div class="wrap">
+    <p class="deck">A consultant reading a <b>Request for Proposals</b> sees one isolated notice — not how to respond,
+      how much the agency moves, who won last time, or whether an award landed. This reads <b>The City Record</b> live
+      and stitches the scattered notices for a single procurement (linked by their <b>PIN</b>) into one chain.</p>
+    <div class="stagepill">
+      <span><i class="dot" style="background:var(--blue)"></i>Solicitation (RFP)</span><span class="arrow">→</span>
+      <span><i class="dot" style="background:var(--amber)"></i>Intent to Award</span><span class="arrow">→</span>
+      <span><i class="dot" style="background:var(--green)"></i>Award ($)</span>
+    </div>
+
     <div class="controls">
       <div class="field">
         <label for="mode">Show</label>
@@ -188,36 +221,92 @@
   </div>
 </section>
 
+<!-- ============ PEOPLE ============ -->
+<section id="tab-people" class="tabpane">
+  <div class="wrap">
+    <p class="deck">The biggest section of the City Record is <b>Changes in Personnel</b> — every appointment, raise, and
+      promotion, stamped with a <b>Title Code</b> and a salary. But a code like <code>53053</code> means nothing on its own.
+      This decodes it: the official civil-service title, whether it needed an <b>exam</b>, the real <b>salary range</b>, and the career ladder.</p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="pmode">Look up</label>
+        <select id="pmode"><option value="role">A role / title</option><option value="person">A person</option></select>
+      </div>
+      <div class="field kw">
+        <label for="pkw" id="pkwlabel">Title keyword</label>
+        <input type="text" id="pkw" placeholder="emergency medical, attorney, engineer…">
+      </div>
+      <div class="field" style="flex:0 0 auto"><label>&nbsp;</label><button id="pgo">Search</button></div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h2><span><span id="preshead">Roles</span> <span class="count" id="prescount"></span></span></h2>
+        <div class="list" id="plist"><div class="empty">Try a title like <b>“emergency medical”</b> — or switch to a person.</div></div>
+      </div>
+      <div class="panel">
+        <h2>Demystified</h2>
+        <div class="detail" id="pdetail"><div class="empty">Pick a role to see its official title, whether it needs an exam, its salary band, and the career ladder.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LAND ============ -->
+<section id="tab-land" class="tabpane">
+  <div class="wrap">
+    <p class="deck">City Planning rezoning notices are pure legalese — <i>“changing from an R7-1 District to an R8 District
+      bounded by…”</i>. This lens turns each into a plain-English card: applicant, what's being built, and a map —
+      cross-referenced to the open <a href="https://data.cityofnewyork.us/City-Government/Zoning-Application-Portal-ZAP-Project-Data/hgx4-8ukb" target="_blank" rel="noopener">ZAP project dataset</a>
+      and the <a href="https://zap.planning.nyc.gov/" target="_blank" rel="noopener">ZAP portal</a>.</p>
+
+    <div class="landcard">
+      <h3>Worked example — the build target</h3>
+      <div class="example">
+        <div class="leg">City Record: “…IN THE MATTER OF an application … Allen Street Mall … 79 Rivington Street, Manhattan … amendment of the Zoning Map …”</div>
+        <span class="arrow">↓ decoded ↓</span>
+        <div><b>79 Rivington Street / Allen Street Mall rezoning</b> — Lower East Side, Manhattan (CD 3). Cross-referenced to its ZAP project (applicant, units, MIH affordable housing, ULURP status) and pinned on a map of the affected lots.</div>
+      </div>
+      <h3 style="margin-top:18px">Roadmap (data spine already verified)</h3>
+      <div class="roadmap">
+        <div class="rm done"><b>✓ ZAP is open data</b>Project dataset <code>hgx4-8ukb</code> + ZAP-BBL <code>2iga-a6mk</code> — no scraping. ULURP number → project → applicant/units/status.</div>
+        <div class="rm done"><b>✓ Geocode + map</b>Planning Labs GeoSearch (address → lat/lon + BBL) and MapPLUTO lot polygons to draw the rezoned area.</div>
+        <div class="rm"><b>Recent Rezonings feed</b>Live City Record land-use notices → plain-English cards, the example above generalized.</div>
+        <div class="rm"><b>Is it still standing?</b>DOB demolition permits joined by BBL — the original “house demolished” signal.</div>
+        <div class="rm"><b>RSS + email alerts</b>Subscribe by address or neighborhood; a scheduled refresh emails new rezonings near you.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <h3>What this is</h3>
-    <p>The City Record is NYC's official daily journal: every agency must publish its procurement solicitations,
-      award notices, public hearings, and property dispositions there (City Charter §1066). This tool reads that
-      same data <b>live</b> from NYC Open Data — dataset
-      <a href="https://data.cityofnewyork.us/City-Government/City-Record-Online/dg92-zbpx" target="_blank" rel="noopener">City Record Online (dg92-zbpx)</a>,
-      the structured form of the printed paper — and re-links notices that share a Procurement Identification Number (PIN).</p>
-    <p><b>Why "how to respond" matters:</b> NYC runs bids through
-      <a href="https://www.nyc.gov/site/mocs/passport/about-passport.page" target="_blank" rel="noopener">PASSPort</a>
-      (the MOCS vendor portal). The City Record is the open legal record of every opportunity ≥ $100K — but it buries the
-      deadline and contact. This tool surfaces them.</p>
-
+    <p>The City Record is NYC's official daily journal: by law (City Charter §1066) every agency publishes its
+      procurement, personnel changes, hearings, land-use actions, and property dispositions there. This tool reads that
+      data <b>live</b> from NYC Open Data and re-links the scattered notices into something a person can follow.</p>
     <div class="caveat">
-      <h3>Honest caveats (the data is messy)</h3>
-      <p style="margin:.3em 0">• <b>RFPs rarely list a dollar value</b> — that's why "Min award $" applies to the <i>Awards</i> view; the money lives there.</p>
-      <p style="margin:.3em 0">• <b>Junk &amp; blanket PINs.</b> Some notices carry placeholder PINs that can't be linked; some PINs bundle many unrelated awards. The tool flags both.</p>
-      <p style="margin:.3em 0">• <b>Dollar outliers.</b> Raw <code>contract_amount</code> contains erroneous mega-values; agency totals exclude rows above $5B. Confirm any figure against the <a href="https://a856-cityrecord.nyc.gov/" target="_blank" rel="noopener">official City Record</a> and <a href="https://www.checkbooknyc.com/" target="_blank" rel="noopener">Checkbook NYC</a>.</p>
+      <h3>Honest caveats</h3>
+      <p style="margin:.3em 0">• <b>Money:</b> RFPs rarely list a value (so “Min award $” applies to Awards); some PINs are junk or blanket codes; raw amounts have outliers (totals exclude rows above $5B).</p>
+      <p style="margin:.3em 0">• <b>People:</b> exam status comes from the Civil Service List, which only lists <i>competitive</i> titles — a title absent there is shown as “no-exam.” Salary band is FY2025 base salary; new hires lag a fiscal year in payroll. Names join across datasets imperfectly (first name is truncated in personnel notices).</p>
     </div>
-
-    <p style="margin-top:16px">Sources: <a href="https://a856-cityrecord.nyc.gov/" target="_blank" rel="noopener">City Record Online (CROL)</a> ·
-      <a href="https://data.cityofnewyork.us/City-Government/City-Record-Online/dg92-zbpx" target="_blank" rel="noopener">NYC Open Data dg92-zbpx</a> ·
-      <a href="https://a0333-passportpublic.nyc.gov/" target="_blank" rel="noopener">PASSPort Public</a> ·
+    <p style="margin-top:16px">Sources:
+      <a href="https://data.cityofnewyork.us/City-Government/City-Record-Online/dg92-zbpx" target="_blank" rel="noopener">City Record Online (dg92-zbpx)</a> ·
+      <a href="https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e" target="_blank" rel="noopener">Citywide Payroll (k397-673e)</a> ·
+      <a href="https://data.cityofnewyork.us/resource/vx8i-nprf" target="_blank" rel="noopener">Civil Service List (vx8i-nprf)</a> ·
+      <a href="https://data.cityofnewyork.us/City-Government/Zoning-Application-Portal-ZAP-Project-Data/hgx4-8ukb" target="_blank" rel="noopener">ZAP Projects (hgx4-8ukb)</a> ·
+      <a href="https://a0333-passportpublic.nyc.gov/" target="_blank" rel="noopener">PASSPort</a> ·
       <a href="https://www.checkbooknyc.com/" target="_blank" rel="noopener">Checkbook NYC</a>.
-      Data fetched live; figures as published by the City. <span id="stamp"></span></p>
+      Data fetched live. <span id="stamp"></span></p>
   </div>
 </footer>
 
 <script>
 const SODA = "https://data.cityofnewyork.us/resource/dg92-zbpx.json";
+const PAY  = "https://data.cityofnewyork.us/resource/k397-673e.json";
+const CSL  = "https://data.cityofnewyork.us/resource/vx8i-nprf.json";
+const PAYFY = "2025";
 const REQ_URL = id => `https://a856-cityrecord.nyc.gov/RequestDetail/${encodeURIComponent(id)}`;
 const PASSPORT = "https://a0333-passportpublic.nyc.gov/";
 const STAGE_RANK = {"Solicitation":0,"Intent to Negotiate":1,"Vendor List":2,"Intent to Award":3,"Award":4};
@@ -227,11 +316,12 @@ const SELECT = "request_id,start_date,agency_name,type_of_notice_description,cat
 const $ = s => document.querySelector(s);
 const todayISO = () => new Date().toISOString().slice(0,10) + "T00:00:00";
 
-async function soda(params){
-  const r = await fetch(SODA + "?" + new URLSearchParams(params).toString());
-  if(!r.ok) throw new Error("SODA " + r.status);
+async function api(base, params){
+  const r = await fetch(base + "?" + new URLSearchParams(params).toString());
+  if(!r.ok) throw new Error("API " + r.status);
   return r.json();
 }
+const soda = params => api(SODA, params);
 
 function usablePin(p){
   if(!p) return false;
@@ -265,17 +355,22 @@ function deadlineTag(due){
   return `<span class="tag open">open · ${dl} days left</span>`;
 }
 
-// ---- agencies ----
+/* ===================== TABS ===================== */
+function showTab(name){
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("active", p.id === "tab-"+name));
+  document.querySelectorAll(".tabbtn").forEach(b=>b.classList.toggle("active", b.dataset.tab === name));
+}
+document.querySelectorAll(".tabbtn").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+
+/* ===================== MONEY ===================== */
 async function loadAgencies(){
   try{
     const rows = await soda({"$select":"agency_name","$where":"section_name='Procurement' AND agency_name IS NOT NULL",
       "$group":"agency_name","$order":"agency_name","$limit":"600"});
-    $("#agency").innerHTML = '<option value="">All agencies</option>' +
-      rows.map(r=>`<option>${r.agency_name}</option>`).join("");
+    $("#agency").innerHTML = '<option value="">All agencies</option>' + rows.map(r=>`<option>${r.agency_name}</option>`).join("");
   }catch(e){ $("#agency").innerHTML = '<option value="">All agencies</option>'; }
 }
 
-// ---- search ----
 let currentRows = [], mode = "open";
 async function search(){
   mode = $("#mode").value;
@@ -291,7 +386,7 @@ async function search(){
   let order;
   if(sort === "amount") order = "contract_amount DESC";
   else if(sort === "newest") order = "start_date DESC";
-  else order = mode === "award" ? "start_date DESC" : "due_date ASC"; // deadline only meaningful for RFPs
+  else order = mode === "award" ? "start_date DESC" : "due_date ASC";
 
   const heads = {open:"Open RFPs", allrfp:"All RFPs", award:"Recent Awards"};
   $("#reshead").textContent = heads[mode] + (agency ? " · " + agency : "");
@@ -320,12 +415,11 @@ function renderList(){
         ${usablePin(r.pin)? `<span class="pin">PIN ${r.pin}</span>` : `<span class="pin" style="opacity:.6">no linkable PIN</span>`}</p>
     </div>`;
   }).join("");
-  document.querySelectorAll(".row").forEach(el=>el.addEventListener("click",()=>select(+el.dataset.i, el)));
+  document.querySelectorAll("#list .row").forEach(el=>el.addEventListener("click",()=>select(+el.dataset.i, el)));
 }
 
-// ---- select + money trail ----
 async function select(i, el){
-  document.querySelectorAll(".row.sel").forEach(e=>e.classList.remove("sel"));
+  document.querySelectorAll("#list .row.sel").forEach(e=>e.classList.remove("sel"));
   el.classList.add("sel");
   const r = currentRows[i];
   $("#detail").innerHTML = '<div class="empty"><span class="loading"></span> tracing…</div>';
@@ -439,11 +533,155 @@ function exportCSV(){
   document.body.appendChild(a); a.click(); a.remove();
 }
 
-// ---- init ----
+/* ===================== PEOPLE ===================== */
+let pRows = [], pMode = "role", competitiveSet = new Set();
+
+function parsePersonnel(desc){
+  const t = cleanText(desc);
+  const g = re => { const m = t.match(re); return m ? m[1].trim() : ""; };
+  return {
+    eff:    g(/Effective Date:\s*([\d/]+)/i),
+    prov:   g(/Provisional Status:\s*(\w+)/i),
+    code:   g(/Title Code:\s*(\w+)/i),
+    reason: g(/Reason For Change:\s*([A-Za-z ]+?)\s*;/i),
+    salary: g(/Salary:\s*([\d.]+)/i),
+    name:   g(/Employee Name:\s*([^.]+?)\s*\.?\s*$/i)
+  };
+}
+
+async function pSearch(){
+  pMode = $("#pmode").value;
+  const kw = $("#pkw").value.trim();
+  $("#preshead").textContent = pMode === "role" ? "Roles" : "People";
+  $("#prescount").textContent = "";
+  $("#pdetail").innerHTML = '<div class="empty">Pick a result on the left.</div>';
+  if(!kw){ $("#plist").innerHTML = '<div class="empty">Type a keyword to search.</div>'; return; }
+  $("#plist").innerHTML = '<div class="empty"><span class="loading"></span> searching…</div>';
+  try{ pMode === "role" ? await pSearchRoles(kw) : await pSearchPeople(kw); }
+  catch(e){ $("#plist").innerHTML = '<div class="empty">Could not reach NYC Open Data. Retry.</div>'; }
+}
+
+async function pSearchRoles(kw){
+  const up = kw.toUpperCase().replace(/'/g,"''");
+  const [pay, comp] = await Promise.all([
+    api(PAY, {"$select":"title_description, count(1) as n, min(base_salary) as mn, max(base_salary) as mx, avg(base_salary) as avg",
+      "$where":`fiscal_year=${PAYFY} AND upper(title_description) like '%${up}%' AND base_salary > 0`,
+      "$group":"title_description","$order":"avg DESC","$limit":"40"}),
+    api(CSL, {"$select":"list_title_desc","$where":`upper(list_title_desc) like '%${up}%'`,"$group":"list_title_desc","$limit":"300"})
+  ]);
+  competitiveSet = new Set(comp.map(c=>(c.list_title_desc||"").toUpperCase().trim()));
+  pRows = pay;
+  $("#prescount").textContent = pay.length === 40 ? "40+" : pay.length;
+  if(!pay.length){ $("#plist").innerHTML = '<div class="empty">No titles match. Try a broader word.</div>'; return; }
+  $("#plist").innerHTML = pay.map((r,i)=>{
+    const comp2 = competitiveSet.has((r.title_description||"").toUpperCase().trim());
+    return `<div class="row" data-i="${i}">
+      <p class="rtitle">${r.title_description}</p>
+      <p class="rmeta"><span class="tag ${comp2?'open':'soon'}">${comp2?'exam title':'no-exam title'}</span>
+        ${(+r.n).toLocaleString()} people · ${money(r.mn)}–${money(r.mx)}</p>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#plist .row").forEach(el=>el.addEventListener("click",()=>pSelectRole(+el.dataset.i, el)));
+}
+
+function pSelectRole(i, el){
+  document.querySelectorAll("#plist .row.sel").forEach(e=>e.classList.remove("sel"));
+  el.classList.add("sel");
+  const r = pRows[i];
+  const comp = competitiveSet.has((r.title_description||"").toUpperCase().trim());
+  const ladder = [...pRows].sort((a,b)=>(+a.avg)-(+b.avg));
+  const maxAvg = Math.max.apply(null, ladder.map(x=>+x.avg||0)) || 1;
+  let html = `<div class="rolename">${r.title_description}</div>
+    <div class="badges"><span class="tag ${comp?'open':'soon'}">${comp?'Competitive — civil-service exam required':'Non-competitive — no exam'}</span></div>
+    <div class="agencybar">
+      <div><div class="big">${money(r.mn)}–${money(r.mx)}</div><div class="lbl">base salary band</div></div>
+      <div><div class="big">${money(r.avg)}</div><div class="lbl">average base</div></div>
+      <div><div class="big">${(+r.n).toLocaleString()}</div><div class="lbl">people · FY${PAYFY}</div></div>
+    </div>
+    <div class="chain-h">Career ladder — matching titles by average pay</div><div class="ladder">`;
+  ladder.forEach(x=>{
+    const w = Math.round((+x.avg/maxAvg)*100);
+    const me = x.title_description === r.title_description;
+    html += `<div class="lrow ${me?'me':''}">
+      <div class="lname">${x.title_description}</div>
+      <div class="lbar"><span style="width:${w}%"></span></div>
+      <div class="lval">${money(x.avg)}</div></div>`;
+  });
+  html += `</div><div class="note">Salary band from <a href="https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e" target="_blank" rel="noopener">Citywide Payroll FY${PAYFY}</a>;
+    exam status from the <a href="https://data.cityofnewyork.us/resource/vx8i-nprf" target="_blank" rel="noopener">Civil Service List</a>, which lists competitive (exam) titles only — a title absent there is treated as no-exam.</div>`;
+  $("#pdetail").innerHTML = html;
+}
+
+async function pSearchPeople(kw){
+  const rows = await soda({"$select":"request_id,start_date,agency_name,short_title,additional_description_1",
+    "$where":"section_name='Changes in Personnel'","$q":kw,"$order":"start_date DESC","$limit":"100"});
+  const people = new Map();
+  rows.forEach(r=>{
+    const p = parsePersonnel(r.additional_description_1);
+    if(!p.name) return;
+    const key = p.name.toUpperCase() + "|" + r.agency_name;
+    if(!people.has(key)) people.set(key, {name:p.name, agency:r.agency_name, actions:[]});
+    people.get(key).actions.push({date:r.start_date, reason:p.reason||cleanText(r.short_title), salary:p.salary, code:p.code, req:r.request_id});
+  });
+  pRows = [...people.values()].sort((a,b)=>b.actions.length-a.actions.length);
+  $("#prescount").textContent = pRows.length;
+  if(!pRows.length){ $("#plist").innerHTML = '<div class="empty">No personnel notices match that name. Try a last name.</div>'; return; }
+  $("#plist").innerHTML = pRows.map((p,i)=>`<div class="row" data-i="${i}">
+      <p class="rtitle">${p.name}</p>
+      <p class="rmeta"><span class="ragency">${p.agency}</span> · ${p.actions.length} notice${p.actions.length>1?'s':''}</p>
+    </div>`).join("");
+  document.querySelectorAll("#plist .row").forEach(el=>el.addEventListener("click",()=>pSelectPerson(+el.dataset.i, el)));
+}
+
+async function pSelectPerson(i, el){
+  document.querySelectorAll("#plist .row.sel").forEach(e=>e.classList.remove("sel"));
+  el.classList.add("sel");
+  const p = pRows[i];
+  $("#pdetail").innerHTML = '<div class="empty"><span class="loading"></span> pulling payroll…</div>';
+  const parts = p.name.split(",");
+  const last = (parts[0]||"").trim().toUpperCase();
+  const first = (parts[1]||"").trim().split(/\s+/)[0].toUpperCase();
+  let pay = [];
+  try{
+    if(last && first) pay = await api(PAY, {
+      "$select":"fiscal_year,title_description,base_salary,regular_gross_paid,total_ot_paid,agency_name,leave_status_as_of_june_30",
+      "$where":`upper(last_name)='${last.replace(/'/g,"''")}' AND upper(first_name) like '${first.replace(/'/g,"''")}%'`,
+      "$order":"fiscal_year DESC","$limit":"4"});
+  }catch(e){}
+  const cur = pay[0];
+  let html = `<div class="rolename">${p.name}</div><div class="badges"><span class="tag">${p.agency}</span></div>`;
+  if(cur){
+    html += `<div class="agencybar">
+      <div><div class="big">${money(cur.base_salary)||"—"}</div><div class="lbl">base salary · FY${cur.fiscal_year}</div></div>
+      <div><div class="big">${money(cur.regular_gross_paid)||"—"}</div><div class="lbl">gross paid</div></div>
+      <div><div class="big">${money(cur.total_ot_paid)||"$0"}</div><div class="lbl">overtime</div></div>
+    </div><div class="rmeta2">Payroll title: <b>${cur.title_description}</b>${cur.leave_status_as_of_june_30? " · "+cur.leave_status_as_of_june_30 : ""}</div>`;
+  } else {
+    html += `<div class="note">No matching Citywide Payroll record (new hires lag a fiscal year, or the name differs across datasets).</div>`;
+  }
+  const acts = p.actions.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  html += `<div class="chain-h">City Record history</div><div class="timeline">`;
+  acts.forEach(a=>{
+    html += `<div class="tl"><span class="tldate">${fdate(a.date)}</span>
+      <span class="tlreason">${a.reason||""}</span>
+      ${a.salary && a.salary!=="1.00" && a.salary!=="1"? `<span class="tlsal">${money(a.salary)}</span>`:""}
+      ${a.code? `<span class="pin">code ${a.code}</span>`:""}
+      <a class="view" href="${REQ_URL(a.req)}" target="_blank" rel="noopener" style="margin-left:auto">↗</a></div>`;
+  });
+  html += `</div>`;
+  $("#pdetail").innerHTML = html;
+}
+
+/* ===================== INIT ===================== */
 $("#go").addEventListener("click", search);
 $("#export").addEventListener("click", exportCSV);
 $("#kw").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
 ["#mode","#agency","#sort","#minamt"].forEach(s=>$(s).addEventListener("change", search));
+
+$("#pgo").addEventListener("click", pSearch);
+$("#pkw").addEventListener("keydown", e=>{ if(e.key==="Enter") pSearch(); });
+$("#pmode").addEventListener("change", ()=>{ $("#pkwlabel").textContent = $("#pmode").value==="role"?"Title keyword":"Person's name"; $("#pkw").placeholder = $("#pmode").value==="role"?"emergency medical, attorney, engineer…":"last name, e.g. Rodriguez"; });
+
 $("#stamp").textContent = "Page loaded " + new Date().toISOString().slice(0,10) + ".";
 loadAgencies();
 search();
