@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>City Record, Decoded — the money, the people, the land</title>
+<title>CROL-List — NYC's official record, made browsable</title>
 <style>
   :root{
     --paper:#f6f2ea; --ink:#1a1714; --muted:#6b6256; --rule:#d8cfbe;
@@ -85,6 +85,10 @@
   .apply dd{margin:0}
   .apply .passport{margin-top:14px;display:inline-block;font:600 13px/1 ui-sans-serif,system-ui,sans-serif;background:var(--ink);color:#fff;padding:10px 15px;border-radius:8px;text-decoration:none}
   .apply .pnote{font:12px/1.5 ui-sans-serif,system-ui,sans-serif;color:var(--muted);margin-top:10px}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 14px}
+  .act{font:600 13px/1 ui-sans-serif,system-ui,sans-serif;padding:10px 13px;border-radius:9px;border:1px solid var(--rule);background:#fff;color:var(--ink);text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .act.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .act:hover{filter:brightness(.97)}
 
   .scope{font-size:14.5px;line-height:1.6;color:#3f3930;background:#faf6ee;border:1px solid var(--rule);border-radius:10px;padding:13px 15px;margin-top:16px}
   .scope .lbl{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
@@ -173,8 +177,8 @@
 <header class="masthead">
   <div class="wrap">
     <div class="kicker">Built on The City Record · Official Journal of the City of New York</div>
-    <h1 class="title">City Record, Decoded</h1>
-    <p class="subtitle">NYC publishes everything it does as legal notices nobody can read. This makes three of them legible.</p>
+    <h1 class="title">CROL-List</h1>
+    <p class="subtitle">The classifieds of city government — NYC's official record (CROL), finally browsable.</p>
     <nav class="tabs">
       <button class="tabbtn active" data-tab="money">Money — contracts</button>
       <button class="tabbtn" data-tab="people">People — pay &amp; titles</button>
@@ -462,7 +466,7 @@ async function loadAgencies(){
   }catch(e){ $("#agency").innerHTML = '<option value="">All agencies</option>'; }
 }
 
-let currentRows = [], mode = "open";
+let currentRows = [], mode = "open", selectedRFP = null;
 async function search(){
   mode = $("#mode").value;
   const agency = $("#agency").value, kw = $("#kw").value.trim();
@@ -513,6 +517,7 @@ async function select(i, el){
   document.querySelectorAll("#list .row.sel").forEach(e=>e.classList.remove("sel"));
   el.classList.add("sel");
   const r = currentRows[i];
+  selectedRFP = r;
   $("#detail").innerHTML = '<div class="empty"><span class="loading"></span> tracing…</div>';
   const [chain, stats] = await Promise.all([ loadChain(r), loadAgencyStats(r.agency_name) ]);
   renderDetail(r, chain, stats);
@@ -540,15 +545,52 @@ async function loadAgencyStats(agency){
 
 function boxClass(t){ return t==="Award" ? "award" : (t==="Intent to Award" ? "intent" : ""); }
 
+function telHref(phone){ const d = String(phone||"").replace(/[^0-9+]/g,""); return d.length>=7 ? "tel:"+d : null; }
+function mailtoFor(r){
+  const subj = `Intent to respond: ${cleanText(r.short_title)}${r.pin?` (PIN ${r.pin})`:""}`;
+  const body =
+    `To ${cleanText(r.contact_name)||"the procurement officer"},\n\n` +
+    `This is a letter of intent in response to the following City of New York solicitation, as published in The City Record:\n\n` +
+    `  Title:  ${cleanText(r.short_title)}\n` +
+    `  PIN:    ${r.pin||"(see notice)"}\n` +
+    `  Agency: ${r.agency_name||""}\n` +
+    (r.due_date?`  Due:    ${fdt(r.due_date)}\n`:"") +
+    `\nWe intend to respond and would appreciate confirmation of (1) how to obtain the full solicitation package and (2) whether responses are submitted via PASSPort or directly to your office.\n\n` +
+    `[One-line capability statement about your firm.]\n\n` +
+    `Thank you,\n[Your name — firm — phone]`;
+  return `mailto:${r.email}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+}
+function icsForRFP(r){
+  if(!r.due_date) return null;
+  const d = new Date(r.due_date), pad = n=>String(n).padStart(2,"0");
+  const fl = dt=>`${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  const esc = s=>String(s||"").replace(/([,;\\])/g,"\\$1").replace(/\n/g,"\\n");
+  return [
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//CROL-List//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VEVENT","UID:"+(r.request_id||fl(d))+"@crol-list.demo","DTSTAMP:"+fl(new Date()),
+    "DTSTART:"+fl(d),"DTEND:"+fl(d),
+    "SUMMARY:"+esc("RFP due: "+cleanText(r.short_title)),
+    "DESCRIPTION:"+esc(`${r.agency_name||""} · PIN ${r.pin||"—"} · ${REQ_URL(r.request_id)}`),
+    "BEGIN:VALARM","TRIGGER:-P1D","ACTION:DISPLAY","DESCRIPTION:RFP response due tomorrow","END:VALARM",
+    "END:VEVENT","END:VCALENDAR"
+  ].join("\r\n");
+}
+function downloadICS(){
+  const ics = selectedRFP && icsForRFP(selectedRFP); if(!ics) return;
+  const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `rfp-deadline-${(selectedRFP.request_id||"reminder")}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
 function buildApply(r){
   const dl = daysLeft(r.due_date);
   const rows = [];
   if(r.selection_method_description) rows.push(["Method", cleanText(r.selection_method_description)]);
   if(r.contact_name) rows.push(["Contact", cleanText(r.contact_name)]);
-  if(r.email) rows.push(["Email", `<a href="mailto:${r.email}">${r.email}</a>`]);
-  if(r.contact_phone) rows.push(["Phone", cleanText(r.contact_phone)]);
   if(r.address_to_request) rows.push(["Submit / request to", cleanText(r.address_to_request)]);
-  if(!r.due_date && !rows.length) return "";
+  const tel = telHref(r.contact_phone);
+  if(!r.due_date && !rows.length && !r.email && !tel) return "";
   const dts = rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("");
   let due = "";
   if(r.due_date){
@@ -556,10 +598,15 @@ function buildApply(r){
       dl <= 14 ? `<span class="tag soon">${dl} day${dl===1?"":"s"} left</span>` : `<span class="tag open">${dl} days left</span>`);
     due = `<div class="due"><span class="d">Respond by ${fdt(r.due_date)}</span>${tag}</div>`;
   }
+  let acts = '<div class="actions">';
+  if(r.email) acts += `<a class="act primary" href="${mailtoFor(r)}">✉️ Email a response</a>`;
+  if(tel) acts += `<a class="act" href="${tel}">📞 Call ${cleanText(r.contact_phone)}</a>`;
+  if(r.due_date) acts += `<button class="act" id="icsbtn" type="button">📅 Add deadline</button>`;
+  acts += `<a class="act" href="${PASSPORT}" target="_blank" rel="noopener">↗ Bid on PASSPort</a>`;
+  acts += '</div>';
   return `<div class="apply"><h3>How to respond to this RFP</h3><div class="body">
-    ${due}<dl>${dts}</dl>
-    <a class="passport" href="${PASSPORT}" target="_blank" rel="noopener">Find &amp; submit on PASSPort Public ↗</a>
-    <div class="pnote">Competitive City solicitations are submitted through <b>PASSPort</b> (NYC's procurement portal). The person above is the agency's listed point of contact for this notice.</div>
+    ${due}${acts}${dts?`<dl>${dts}</dl>`:""}
+    <div class="pnote"><b>Email a response</b> opens a pre-filled letter of intent to the listed contact — edit before sending. Competitive bids are ultimately submitted through <b>PASSPort</b>. Nothing leaves your device until you hit send.</div>
   </div></div>`;
 }
 
@@ -600,6 +647,7 @@ function renderDetail(r, chain, stats){
   const scope = cleanText(r.additional_description_1);
   if(scope) html += `<div class="scope"><span class="lbl">What they want</span>${scope.slice(0,900)}${scope.length>900?"…":""}</div>`;
   $("#detail").innerHTML = html;
+  const ib = $("#icsbtn"); if(ib) ib.addEventListener("click", downloadICS);
 }
 
 function exportCSV(){

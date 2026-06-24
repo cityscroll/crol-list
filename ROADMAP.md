@@ -21,6 +21,7 @@ Data live (no backend, no key).
 - **"Is it still standing?"** — DOB demolition permits joined by BBL (the original hook).
 - Worked example: **79 Rivington Street / Allen Street Mall** rezoning (Lower East Side, CD 3).
 - Filters: **ZIP code, address, or neighborhood** (resolved via Planning Labs GeoSearch → BBL).
+- ZAP has its **own email subscription** for zoning projects — link out to it and complement with our ZIP/address alerts.
 
 ## 🔔 Cross-lens — Subscribe / daily digest  *(mock built — live-data preview; real send pending)*
 Saved filters that refresh on a schedule and email/text a digest. Useful for **both** lenses:
