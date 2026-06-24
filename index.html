@@ -136,6 +136,31 @@
   .rm b{display:block;margin-bottom:4px}
   .rm.done{border-left:3px solid var(--green)}
 
+  /* alerts */
+  .afield{margin-bottom:14px}
+  .afield label{display:block;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+  .segbtn{font:600 13px/1 ui-sans-serif,system-ui,sans-serif;padding:9px 14px;background:#fff;color:var(--muted);border:none;border-right:1px solid var(--rule);cursor:pointer}
+  .segbtn:last-child{border-right:none}
+  .segbtn.active{background:var(--ink);color:#fff}
+  .muted{color:var(--muted)}
+  .emailmock{border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+  .emailmock .ehead{padding:12px 14px;border-bottom:1px solid var(--rule);background:#faf6ee}
+  .emailmock .efrom{font:600 12.5px/1.4 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
+  .emailmock .esubj{font:800 17px/1.3 "Times New Roman",serif;margin-top:3px;color:var(--ink)}
+  .emailmock .ebody{padding:6px 14px 14px}
+  .digitem{padding:11px 0;border-bottom:1px solid var(--rule)}
+  .digitem:last-child{border-bottom:none}
+  .digitem .dt{font-weight:700;font-size:14px}
+  .digitem .dm{font:12px/1.45 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
+  .digitem .da{font:800 16px/1 "Times New Roman",serif;color:var(--green)}
+  .phone{max-width:300px;margin:6px auto 0;background:#0d1117;border-radius:28px;padding:14px 12px;box-shadow:var(--shadow)}
+  .phone .screen{background:#0b141a;border-radius:18px;padding:16px 11px;min-height:190px}
+  .bubble{background:var(--blue);color:#fff;border-radius:16px 16px 16px 5px;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:8px}
+  .bubble .src{display:block;font:600 10px/1 ui-sans-serif,system-ui,sans-serif;opacity:.75;margin-bottom:5px;letter-spacing:.04em}
+  .savedalert{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#faf6ee;border:1px solid var(--rule);border-radius:9px;padding:9px 12px;margin-top:8px;font-size:13px}
+  .savedalert button{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;padding:5px 9px;background:#fff;color:var(--rose);border:1px solid var(--rule);border-radius:6px;cursor:pointer}
+
   .loading{display:inline-block;width:14px;height:14px;border:2px solid var(--rule);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -154,6 +179,7 @@
       <button class="tabbtn active" data-tab="money">Money — contracts</button>
       <button class="tabbtn" data-tab="people">People — pay &amp; titles</button>
       <button class="tabbtn" data-tab="land">Land — rezonings</button>
+      <button class="tabbtn" data-tab="alerts">🔔 Alerts</button>
     </nav>
   </div>
 </header>
@@ -276,6 +302,71 @@
         <div class="rm"><b>Is it still standing?</b>DOB demolition permits joined by BBL — the original “house demolished” signal.</div>
         <div class="rm"><b>RSS + email alerts</b>Subscribe by address or neighborhood; a scheduled refresh emails new rezonings near you.</div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ALERTS (mock) ============ -->
+<section id="tab-alerts" class="tabpane">
+  <div class="wrap">
+    <p class="deck">The City Record comes out every business day — but nobody reads it daily. Subscribe to a slice and
+      let it come to you: a digest of just the notices you care about. <span class="muted">(Demo mock — nothing is actually sent.)</span></p>
+    <div class="grid">
+      <div class="panel">
+        <h2>Build an alert</h2>
+        <div style="padding:16px">
+          <div class="afield">
+            <label>Watch for</label>
+            <select id="awatch">
+              <option value="bigaward">Contract awards over a threshold</option>
+              <option value="rfpkw">Open RFPs matching a keyword</option>
+              <option value="rezone">Rezonings near a neighborhood</option>
+            </select>
+          </div>
+          <div class="afield">
+            <label id="aparamlabel">Minimum award</label>
+            <select id="athresh">
+              <option value="1000000">$1M+</option>
+              <option value="5000000">$5M+</option>
+              <option value="10000000">$10M+</option>
+              <option value="50000000">$50M+</option>
+            </select>
+            <input type="text" id="aparam" placeholder="" style="display:none">
+          </div>
+          <div class="afield">
+            <label>Send via</label>
+            <div class="seg">
+              <button class="segbtn active" data-ch="email">✉️ Email</button>
+              <button class="segbtn" data-ch="sms">💬 Text</button>
+            </div>
+          </div>
+          <div class="afield">
+            <label id="adestlabel">Email address</label>
+            <input type="text" id="adest" placeholder="you@example.com">
+          </div>
+          <div class="afield">
+            <label>Frequency</label>
+            <select id="afreq"><option>Daily</option><option>Weekly</option></select>
+          </div>
+          <button id="apreview">Preview today's digest</button>
+          <button id="asave" class="mini" style="margin-left:8px">Save alert</button>
+          <div id="asaved"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Preview</h2>
+        <div class="detail" id="apreviewbox"><div class="empty">Build an alert and hit <b>Preview</b> to see the digest, populated with today's real notices.</div></div>
+      </div>
+    </div>
+    <div class="caveat" style="margin-top:20px">
+      <h3>How the real thing would send (all open-source)</h3>
+      <p style="margin:.3em 0">This demo only mocks the message. In production, a scheduled job (launchd/cron) re-runs your saved query,
+        diffs against the last run, and sends new items through an open-source notifier — no vendor lock-in:</p>
+      <p style="margin:.3em 0">•&nbsp;<a href="https://github.com/caronc/apprise" target="_blank" rel="noopener">Apprise</a> — one Python library, 100+ channels (email + SMS + push).
+        •&nbsp;<a href="https://novu.co/" target="_blank" rel="noopener">Novu</a> — self-hostable multi-channel infrastructure.
+        •&nbsp;<a href="https://listmonk.app/" target="_blank" rel="noopener">Listmonk</a> — newsletter / digest manager.
+        •&nbsp;<a href="https://ntfy.sh/" target="_blank" rel="noopener">ntfy</a> — lightweight push.
+        Email via <a href="https://nodemailer.com/" target="_blank" rel="noopener">Nodemailer</a>/SMTP; SMS via an open gateway (<a href="https://www.jasminsms.com/" target="_blank" rel="noopener">Jasmin</a> / <a href="https://www.kannel.org/" target="_blank" rel="noopener">Kannel</a>) or a provider.</p>
     </div>
   </div>
 </section>
@@ -672,6 +763,99 @@ async function pSelectPerson(i, el){
   $("#pdetail").innerHTML = html;
 }
 
+/* ===================== ALERTS (mock) ===================== */
+let aChannel = "email";
+const AKEY = "crd_alerts_v1";
+function aStore(){ try{ return JSON.parse(localStorage.getItem(AKEY)||"[]"); }catch(e){ return []; } }
+function aSet(v){ try{ localStorage.setItem(AKEY, JSON.stringify(v)); }catch(e){} }
+
+function aWatchChange(){
+  const w = $("#awatch").value;
+  if(w==="bigaward"){ $("#aparamlabel").textContent="Minimum award"; $("#athresh").style.display=""; $("#aparam").style.display="none"; }
+  else {
+    $("#athresh").style.display="none"; $("#aparam").style.display="";
+    if(w==="rfpkw"){ $("#aparamlabel").textContent="Keyword"; $("#aparam").placeholder="construction, IT, security…"; }
+    else { $("#aparamlabel").textContent="ZIP, address, or neighborhood"; $("#aparam").placeholder="11211, 79 Rivington, Bushwick…"; }
+  }
+}
+function aDescribe(){
+  const w=$("#awatch").value, freq=$("#afreq").value.toLowerCase();
+  if(w==="bigaward") return `${freq} digest of NYC contract awards over ${money($("#athresh").value)}`;
+  if(w==="rfpkw") return `${freq} digest of open RFPs matching “${$("#aparam").value||"…"}”`;
+  return `${freq} digest of rezonings near “${$("#aparam").value||"…"}”`;
+}
+
+async function aFetch(){
+  const w=$("#awatch").value;
+  if(w==="bigaward"){
+    const t=$("#athresh").value;
+    return { kind:"award", rows: await soda({"$select":SELECT,"$where":`type_of_notice_description='Award' AND contract_amount >= ${t} AND contract_amount < 5000000000`,"$order":"start_date DESC","$limit":"5"}) };
+  }
+  if(w==="rfpkw"){
+    const p={"$select":SELECT,"$where":`type_of_notice_description='Solicitation' AND due_date > '${todayISO()}'`,"$order":"due_date ASC","$limit":"5"};
+    if($("#aparam").value.trim()) p["$q"]=$("#aparam").value.trim();
+    return { kind:"rfp", rows: await soda(p) };
+  }
+  const p={"$select":"request_id,start_date,agency_name,short_title,additional_description_1",
+    "$where":"section_name='Public Hearings and Meetings' AND (agency_name='City Planning Commission' OR agency_name like '%Planning%' OR agency_name like '%Borough President%')",
+    "$order":"start_date DESC","$limit":"5"};
+  if($("#aparam").value.trim()) p["$q"]=$("#aparam").value.trim();
+  return { kind:"rezone", rows: await soda(p) };
+}
+
+function digItemHTML(kind, r){
+  if(kind==="award") return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
+    <div class="dm">${r.agency_name} · ${fdate(r.start_date)}${r.vendor_name? " · "+cleanText(r.vendor_name):""}</div>
+    <div class="da">${money(r.contract_amount)||""}</div></div>`;
+  if(kind==="rfp"){ const dl=daysLeft(r.due_date);
+    return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
+    <div class="dm">${r.agency_name} · due ${fdt(r.due_date)}${dl!=null?` (${dl} days)`:""}</div></div>`; }
+  return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
+    <div class="dm">${r.agency_name} · ${fdate(r.start_date)}</div></div>`;
+}
+
+async function aPreview(){
+  $("#apreviewbox").innerHTML='<div class="empty"><span class="loading"></span> fetching today&#39;s matching notices…</div>';
+  let data;
+  try{ data = await aFetch(); }catch(e){ $("#apreviewbox").innerHTML='<div class="empty">Could not reach NYC Open Data. Retry.</div>'; return; }
+  const rows=data.rows||[];
+  const dest=$("#adest").value.trim() || (aChannel==="email"?"you@example.com":"+1 (555) 012-3456");
+  const subj=aDescribe();
+  if(aChannel==="email"){
+    const body = rows.length ? rows.map(r=>digItemHTML(data.kind,r)).join("") : '<div class="empty">No matching notices today — so you&#39;d get nothing. (That&#39;s the point: signal, not noise.)</div>';
+    $("#apreviewbox").innerHTML = `<div class="emailmock">
+      <div class="ehead"><div class="efrom">City Record, Decoded &lt;alerts@cityrecord.demo&gt; → ${dest}</div>
+      <div class="esubj">Your ${subj}</div></div>
+      <div class="ebody">${body}
+        <div style="margin-top:12px;font:12px/1.5 ui-sans-serif,system-ui,sans-serif;color:var(--muted)">${rows.length} notice${rows.length===1?"":"s"} today · from The City Record · <a href="https://a856-cityrecord.nyc.gov/" target="_blank" rel="noopener">manage / unsubscribe</a></div>
+      </div></div>
+      <div class="note">Mock preview, built from <b>live</b> City Record data. No email was sent.</div>`;
+  } else {
+    const top = rows.slice(0,3).map(r=>{
+      if(data.kind==="award") return `${money(r.contract_amount)} — ${cleanText(r.short_title).slice(0,38)} (${r.agency_name})`;
+      if(data.kind==="rfp") return `RFP due ${fdate(r.due_date)} — ${cleanText(r.short_title).slice(0,38)}`;
+      return `${cleanText(r.short_title).slice(0,44)} (${r.agency_name})`;
+    });
+    const msg = rows.length ? `NYC City Record — ${subj}:\n• ${top.join("\n• ")}\nmore: cityrecord.nyc.gov` : `NYC City Record: no matches today for your alert.`;
+    $("#apreviewbox").innerHTML = `<div class="phone"><div class="screen">
+      <div class="bubble"><span class="src">City Record Decoded · now</span>${msg.replace(/\n/g,"<br>")}</div>
+    </div></div><div class="note">Mock text to ${dest}, built from <b>live</b> data. No SMS was sent.</div>`;
+  }
+}
+
+function aRenderSaved(){
+  const list=aStore();
+  $("#asaved").innerHTML = list.length
+    ? '<div style="margin-top:16px;font:600 11px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Saved alerts (demo)</div>' +
+      list.map((a,i)=>`<div class="savedalert"><span>${a.desc} → <b>${a.dest}</b></span><button data-i="${i}">remove</button></div>`).join("")
+    : "";
+  document.querySelectorAll("#asaved .savedalert button").forEach(b=>b.addEventListener("click",()=>{ const l=aStore(); l.splice(+b.dataset.i,1); aSet(l); aRenderSaved(); }));
+}
+function aSave(){
+  const dest=$("#adest").value.trim() || (aChannel==="email"?"you@example.com":"+1 555-0123");
+  const l=aStore(); l.push({desc:aDescribe(), dest, channel:aChannel}); aSet(l); aRenderSaved();
+}
+
 /* ===================== INIT ===================== */
 $("#go").addEventListener("click", search);
 $("#export").addEventListener("click", exportCSV);
@@ -682,9 +866,21 @@ $("#pgo").addEventListener("click", pSearch);
 $("#pkw").addEventListener("keydown", e=>{ if(e.key==="Enter") pSearch(); });
 $("#pmode").addEventListener("change", ()=>{ $("#pkwlabel").textContent = $("#pmode").value==="role"?"Title keyword":"Person's name"; $("#pkw").placeholder = $("#pmode").value==="role"?"emergency medical, attorney, engineer…":"last name, e.g. Rodriguez"; });
 
+$("#awatch").addEventListener("change", aWatchChange);
+$("#apreview").addEventListener("click", aPreview);
+$("#asave").addEventListener("click", aSave);
+document.querySelectorAll(".segbtn").forEach(b=>b.addEventListener("click",()=>{
+  aChannel = b.dataset.ch;
+  document.querySelectorAll(".segbtn").forEach(x=>x.classList.toggle("active", x===b));
+  $("#adestlabel").textContent = aChannel==="email" ? "Email address" : "Phone number";
+  $("#adest").placeholder = aChannel==="email" ? "you@example.com" : "+1 (555) 012-3456";
+}));
+
 $("#stamp").textContent = "Page loaded " + new Date().toISOString().slice(0,10) + ".";
 loadAgencies();
 search();
+aWatchChange();
+aRenderSaved();
 </script>
 </body>
 </html>
