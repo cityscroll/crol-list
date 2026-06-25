@@ -67,6 +67,16 @@
   .wand{display:flex;flex-wrap:wrap;gap:7px}
   .wandchip{font-family:var(--font-sc);font-weight:600;letter-spacing:.04em;font-size:12px;padding:7px 12px;border:1px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink-soft);cursor:pointer}
   .wandchip:hover{border-color:var(--oxblood);color:var(--oxblood)}
+  .nlbox{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin-top:18px;box-shadow:var(--shadow)}
+  .nllabel{font-family:var(--font-sc);text-transform:uppercase;letter-spacing:.13em;font-size:12px;color:var(--ink-soft);display:block;margin-bottom:8px}
+  .nlrow{display:flex;gap:10px;flex-wrap:wrap}
+  .nlrow input{flex:1 1 320px;font:15px/1.3 var(--font-body);padding:10px 11px;border:1px solid var(--rule);border-radius:9px;background:#fff;color:var(--ink)}
+  .qchip{display:inline-block;font-family:var(--font-sc);font-size:12px;letter-spacing:.04em;text-transform:uppercase;background:var(--paper-2);border:1px solid var(--rule);border-radius:6px;padding:5px 9px;margin:0 6px 6px 0;color:var(--ink-soft)}
+  .qchip b{color:var(--oxblood)}
+  .qcode{font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;background:var(--paper-2);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;white-space:pre-wrap;color:var(--ink-soft);margin-top:4px}
+  .tryrow{margin-top:12px;font-family:var(--font-sc);text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--muted)}
+  .trychip{font-family:var(--font-sc);font-weight:600;letter-spacing:.03em;font-size:12px;padding:6px 11px;border:1px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink-soft);cursor:pointer;margin:0 4px 6px 6px;text-transform:none}
+  .trychip:hover{border-color:var(--oxblood);color:var(--oxblood)}
 
   /* layout */
   .grid{display:grid;grid-template-columns:minmax(290px,380px) 1fr;gap:22px;margin-top:22px;align-items:start}
@@ -181,6 +191,8 @@
   .digitem .dt{font-weight:700;font-size:14px}
   .digitem .dm{font:12px/1.45 ui-sans-serif,system-ui,sans-serif;color:var(--muted)}
   .digitem .da{font:800 16px/1 var(--font-display);color:var(--green)}
+  .digitem .dc{font:12px/1.5 ui-sans-serif,system-ui,sans-serif;margin-top:3px}
+  .digitem .dc a{color:var(--oxblood);text-decoration:none}
   .phone{max-width:300px;margin:6px auto 0;background:#0d1117;border-radius:28px;padding:14px 12px;box-shadow:var(--shadow)}
   .phone .screen{background:#0b141a;border-radius:18px;padding:16px 11px;min-height:190px}
   .bubble{background:var(--blue);color:#fff;border-radius:16px 16px 16px 5px;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:8px}
@@ -233,6 +245,15 @@
       <span><i class="dot" style="background:var(--blue)"></i>Solicitation (RFP)</span><span class="arrow">→</span>
       <span><i class="dot" style="background:var(--amber)"></i>Intent to Award</span><span class="arrow">→</span>
       <span><i class="dot" style="background:var(--green)"></i>Award ($)</span>
+    </div>
+
+    <div class="nlbox">
+      <label class="nllabel">✨ Ask in plain English <span style="font-family:var(--font-caslon);font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted)">— prototype; here it's parsed on-device, in production a small model</span></label>
+      <div class="nlrow">
+        <input type="text" id="nlq" value="I'm a construction company doing affordable housing — show contracts over $500k, no special requirements, deadline within 3 months.">
+        <button id="nlgo">✨ Translate</button>
+      </div>
+      <div id="nltrans"></div>
     </div>
 
     <div class="controls">
@@ -301,6 +322,15 @@
         <input type="text" id="pkw" placeholder="emergency medical, attorney, engineer…">
       </div>
       <div class="field" style="flex:0 0 auto"><label>&nbsp;</label><button id="pgo">Search</button></div>
+    </div>
+
+    <div class="tryrow">Try:
+      <button class="trychip" data-pm="role" data-q="police officer">Police Officer</button>
+      <button class="trychip" data-pm="role" data-q="emergency medical">EMT / Paramedic</button>
+      <button class="trychip" data-pm="role" data-q="administrative staff analyst">Admin Staff Analyst</button>
+      <button class="trychip" data-pm="role" data-q="attorney">Attorney</button>
+      <button class="trychip" data-pm="role" data-q="teacher">Teacher</button>
+      <button class="trychip" data-pm="person" data-q="Rodriguez">a person → Rodriguez</button>
     </div>
 
     <div class="grid">
@@ -680,6 +710,39 @@ function renderDetail(r, chain, stats){
   const ib = $("#icsbtn"); if(ib) ib.addEventListener("click", downloadICS);
 }
 
+function parseNL(text){
+  const t=" "+text.toLowerCase()+" ";
+  const out={keywords:[],minAmount:null,months:null,excludeSpecial:false};
+  let m=t.match(/(?:over|above|more than|at least|>\s*)\s*\$?\s*([\d.,]+)\s*(k|m|thousand|million|mm)?/);
+  if(m){let n=parseFloat(m[1].replace(/,/g,""));const u=m[2]||"";if(/m/.test(u))n*=1e6;else if(/k|thousand/.test(u))n*=1e3;if(n>=1000)out.minAmount=Math.round(n);}
+  m=t.match(/(\d+)\s*month/); if(m)out.months=parseInt(m[1]);
+  if(!out.months){m=t.match(/(\d+)\s*week/);if(m)out.months=Math.max(1,Math.round(parseInt(m[1])/4));}
+  if(/no special|without special|standard requirement|no .{0,14}requirement/.test(t))out.excludeSpecial=true;
+  const dict=["affordable housing","construction","renovation","electrical","plumbing","hvac","security","janitorial","information technology","software","consulting","engineering","architecture","demolition","roofing","elevator","transportation","shelter","homeless","mental health","health","catering","legal","staffing","maintenance","landscaping","food"];
+  dict.forEach(k=>{if(t.includes(" "+k))out.keywords.push(k);});
+  m=t.match(/specializ\w+ in ([a-z &]+?)(?:\.|,| and | who | that |$)/);
+  if(m){const kw=m[1].trim();if(kw.length>2&&!out.keywords.includes(kw))out.keywords.unshift(kw);}
+  out.keywords=[...new Set(out.keywords)].slice(0,4);
+  return out;
+}
+function nlTranslate(){
+  const text=$("#nlq").value.trim(); if(!text) return;
+  const p=parseNL(text);
+  const chips=[`<span class="qchip">notice = <b>open RFP</b></span>`];
+  if(p.keywords.length) chips.push(`<span class="qchip">about <b>${p.keywords.join(" / ")}</b></span>`);
+  if(p.minAmount) chips.push(`<span class="qchip">value ≥ <b>${money(p.minAmount)}</b></span>`);
+  if(p.months) chips.push(`<span class="qchip">due within <b>${p.months} mo</b></span>`);
+  if(p.excludeSpecial) chips.push(`<span class="qchip"><b>standard</b> · no special case</span>`);
+  const kwExpr=p.keywords.length?p.keywords.map(k=>`'${k}'`).join(" OR "):"(any)";
+  const dueMax=p.months?new Date(Date.now()+p.months*2629800000).toISOString().slice(0,10):null;
+  const code=["type_of_notice = 'Solicitation'","due_date > today"+(dueMax?` AND due_date <= '${dueMax}'`:""),
+    `$q ~ ${kwExpr}`, p.minAmount?`contract_amount >= ${p.minAmount}`:null,
+    p.excludeSpecial?`selection_method NOT LIKE '%Special%'`:null].filter(Boolean).join("\nAND ");
+  $("#nltrans").innerHTML=`<div style="margin:10px 0 2px">${chips.join("")}</div><div class="qcode">${code}</div>`;
+  $("#mode").value="open"; $("#sort").value="deadline"; $("#kw").value=p.keywords.join(" ");
+  search();
+}
+
 function exportCSV(){
   if(!currentRows.length) return;
   const cols = [
@@ -906,12 +969,15 @@ async function landSelect(i, el){
     </div>`;
   if(r.project_brief) html+=`<div class="scope"><span class="lbl">In plain English</span>${cleanText(r.project_brief)}</div>`;
   if(actList.length) html+=`<div class="rmeta2" style="margin-top:10px"><b>Actions:</b> ${actList.join(" · ")}</div>`;
+  const area=(r.project_name||r.borough||"").replace(/(rezoning|demapping|rezone|special permit|special district|text amendment|mapping actions?|modification|disposition|non-?ulurp).*/i,"").trim().split(/\s+/).slice(0,3).join(" ")||r.borough||"";
   html+=`<div class="actions" style="margin-top:12px">
     <a class="act primary" href="https://zap.planning.nyc.gov/projects/${r.project_id}" target="_blank" rel="noopener">↗ Full project on ZAP</a>
-    <a class="act" href="https://a856-cityrecord.nyc.gov/Search/Advanced" target="_blank" rel="noopener">Find the notice in City Record</a>
+    <button class="act" type="button" id="landalert" data-q="${area.replace(/"/g,'')}">🔔 Alert me about this area</button>
+    <a class="act" href="https://a856-cityrecord.nyc.gov/Search/Advanced" target="_blank" rel="noopener">Find in City Record</a>
   </div>
   <div id="landmap"></div><div class="note" id="landmapnote"><span class="loading"></span> locating…</div>`;
   $("#ldetail").innerHTML=html;
+  const la=$("#landalert"); if(la) la.addEventListener("click",()=>landToAlert(la.dataset.q));
   const q=(r.project_name||"").replace(/rezoning|special (mixed use )?district|text amendment|\bnos?\.?\b/ig," ").replace(/\s+/g," ").trim();
   const geo = q ? await geocode(q+" "+(r.borough||"")+" New York") : null;
   if(geo) landShowMap(geo.lat,geo.lon,geo.label);
@@ -927,6 +993,13 @@ function landShowMap(lat, lon, label){
   landMarker=L.marker([lat,lon]).addTo(landMap);
   if(label) landMarker.bindPopup(label).openPopup();
   setTimeout(()=>{ if(landMap) landMap.invalidateSize(); },150);
+}
+
+function landToAlert(term){
+  showTab("alerts");
+  $("#awatch").value="rezone"; aWatchChange();
+  if(term) $("#aparam").value=term;
+  aPreview();
 }
 
 /* ===================== ALERTS (mock) ===================== */
@@ -970,13 +1043,20 @@ async function aFetch(){
   return { kind:"rezone", rows: await api(ZAP, zp) };
 }
 
+function digContact(r){
+  const tel=String(r.contact_phone||"").replace(/[^0-9+]/g,""); const parts=[];
+  if(r.contact_name) parts.push(cleanText(r.contact_name));
+  if(r.email) parts.push(`<a href="mailto:${r.email}">✉ ${r.email}</a>`);
+  if(tel.length>=7) parts.push(`<a href="tel:${tel}">☎ ${cleanText(r.contact_phone)}</a>`);
+  return parts.length?`<div class="dc">${parts.join(" · ")}</div>`:"";
+}
 function digItemHTML(kind, r){
   if(kind==="award") return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
     <div class="dm">${r.agency_name} · ${fdate(r.start_date)}${r.vendor_name? " · "+cleanText(r.vendor_name):""}</div>
-    <div class="da">${money(r.contract_amount)||""}</div></div>`;
+    <div class="da">${money(r.contract_amount)||""}</div>${digContact(r)}</div>`;
   if(kind==="rfp"){ const dl=daysLeft(r.due_date);
     return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
-    <div class="dm">${r.agency_name} · due ${fdt(r.due_date)}${dl!=null?` (${dl} days)`:""}</div></div>`; }
+    <div class="dm">${r.agency_name} · due ${fdt(r.due_date)}${dl!=null?` (${dl} days)`:""}</div>${digContact(r)}</div>`; }
   return `<div class="digitem"><div class="dt">${r.project_name||"(unnamed rezoning)"}</div>
     <div class="dm">${r.borough||""}${r.community_district? " · CD "+r.community_district:""} · ${r.public_status||""}${r.primary_applicant? " · "+r.primary_applicant:""}${mihOn(r.mih_flag)? " · affordable housing":""}</div></div>`;
 }
@@ -1025,6 +1105,8 @@ function aSave(){
 
 /* ===================== INIT ===================== */
 $("#go").addEventListener("click", search);
+$("#nlgo").addEventListener("click", nlTranslate);
+$("#nlq").addEventListener("keydown", e=>{ if(e.key==="Enter") nlTranslate(); });
 $("#export").addEventListener("click", exportCSV);
 $("#kw").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
 ["#mode","#agency","#sort","#minamt"].forEach(s=>$(s).addEventListener("change", search));
@@ -1032,6 +1114,8 @@ $("#kw").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
 $("#pgo").addEventListener("click", pSearch);
 $("#pkw").addEventListener("keydown", e=>{ if(e.key==="Enter") pSearch(); });
 $("#pmode").addEventListener("change", ()=>{ $("#pkwlabel").textContent = $("#pmode").value==="role"?"Title keyword":"Person's name"; $("#pkw").placeholder = $("#pmode").value==="role"?"emergency medical, attorney, engineer…":"last name, e.g. Rodriguez"; });
+function applyPSuggestion(pm, q){ $("#pmode").value=pm; $("#pmode").dispatchEvent(new Event("change")); $("#pkw").value=q; pSearch(); }
+document.querySelectorAll(".trychip").forEach(b=>b.addEventListener("click",()=>applyPSuggestion(b.dataset.pm, b.dataset.q)));
 
 $("#awatch").addEventListener("change", aWatchChange);
 $("#apreview").addEventListener("click", aPreview);
