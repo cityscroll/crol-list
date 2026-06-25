@@ -926,7 +926,7 @@ function aWatchChange(){
   else {
     $("#athresh").style.display="none"; $("#aparam").style.display="";
     if(w==="rfpkw"){ $("#aparamlabel").textContent="Keyword"; $("#aparam").placeholder="construction, IT, security…"; }
-    else { $("#aparamlabel").textContent="ZIP, address, or neighborhood"; $("#aparam").placeholder="11211, 79 Rivington, Bushwick…"; }
+    else { $("#aparamlabel").textContent="ZIP, address, or neighborhood"; $("#aparam").placeholder="Allen Street, 79 Rivington, Bushwick…"; if(!$("#aparam").value.trim()) $("#aparam").value="Allen Street"; }
   }
 }
 function aDescribe(){
@@ -947,11 +947,10 @@ async function aFetch(){
     if($("#aparam").value.trim()) p["$q"]=$("#aparam").value.trim();
     return { kind:"rfp", rows: await soda(p) };
   }
-  const p={"$select":"request_id,start_date,agency_name,short_title,additional_description_1",
-    "$where":"section_name='Public Hearings and Meetings' AND (agency_name='City Planning Commission' OR agency_name like '%Planning%' OR agency_name like '%Borough President%')",
-    "$order":"start_date DESC","$limit":"5"};
-  if($("#aparam").value.trim()) p["$q"]=$("#aparam").value.trim();
-  return { kind:"rezone", rows: await soda(p) };
+  const zp={"$select":"project_id,project_name,project_brief,primary_applicant,public_status,borough,community_district,mih_flag,current_milestone_date",
+    "$where":"ulurp_non='ULURP'","$order":"current_milestone_date DESC","$limit":"5"};
+  if($("#aparam").value.trim()) zp["$q"]=$("#aparam").value.trim();
+  return { kind:"rezone", rows: await api(ZAP, zp) };
 }
 
 function digItemHTML(kind, r){
@@ -961,8 +960,8 @@ function digItemHTML(kind, r){
   if(kind==="rfp"){ const dl=daysLeft(r.due_date);
     return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
     <div class="dm">${r.agency_name} · due ${fdt(r.due_date)}${dl!=null?` (${dl} days)`:""}</div></div>`; }
-  return `<div class="digitem"><div class="dt">${cleanText(r.short_title)||"(untitled)"}</div>
-    <div class="dm">${r.agency_name} · ${fdate(r.start_date)}</div></div>`;
+  return `<div class="digitem"><div class="dt">${r.project_name||"(unnamed rezoning)"}</div>
+    <div class="dm">${r.borough||""}${r.community_district? " · CD "+r.community_district:""} · ${r.public_status||""}${r.primary_applicant? " · "+r.primary_applicant:""}${mihOn(r.mih_flag)? " · affordable housing":""}</div></div>`;
 }
 
 async function aPreview(){
@@ -980,12 +979,12 @@ async function aPreview(){
       <div class="ebody">${body}
         <div style="margin-top:12px;font:12px/1.5 ui-sans-serif,system-ui,sans-serif;color:var(--muted)">${rows.length} notice${rows.length===1?"":"s"} today · from The City Record · <a href="https://a856-cityrecord.nyc.gov/" target="_blank" rel="noopener">manage / unsubscribe</a></div>
       </div></div>
-      <div class="note">Mock preview, built from <b>live</b> City Record data. No email was sent.</div>`;
+      <div class="note">Mock preview, built from <b>live</b> NYC Open Data. No email was sent.</div>`;
   } else {
     const top = rows.slice(0,3).map(r=>{
       if(data.kind==="award") return `${money(r.contract_amount)} — ${cleanText(r.short_title).slice(0,38)} (${r.agency_name})`;
       if(data.kind==="rfp") return `RFP due ${fdate(r.due_date)} — ${cleanText(r.short_title).slice(0,38)}`;
-      return `${cleanText(r.short_title).slice(0,44)} (${r.agency_name})`;
+      return `${(r.project_name||"rezoning").slice(0,40)} (${r.borough||""})`;
     });
     const msg = rows.length ? `NYC City Record — ${subj}:\n• ${top.join("\n• ")}\nmore: cityrecord.nyc.gov` : `NYC City Record: no matches today for your alert.`;
     $("#apreviewbox").innerHTML = `<div class="phone"><div class="screen">
