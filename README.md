@@ -1,74 +1,73 @@
-# City Record Money Map
+# CROL-List
 
-**Making *The City Record* legible.**
+**NYC's official record (The City Record), made browsable.** The classifieds of city government.
 
 [The City Record](https://a856-cityrecord.nyc.gov/) is the official daily journal of the City of
-New York. By law (City Charter §1066), every agency must publish its procurement solicitations,
-contract awards, public hearings, land-use actions, and personnel changes there. It is, in effect,
-NYC's daily newspaper of government — and almost nobody can read it. It arrives as a dense stream of
-disconnected legal notices: a Request for Proposals here, an award months later there, a rezoning
-written entirely in metes-and-bounds.
+New York — by law (City Charter §1066) every agency must publish its contracts, personnel changes,
+hearings, and rezonings there. It's the city's daily newspaper of government, and almost nobody can
+read it: a dense stream of disconnected legal notices. **CROL-List** re-links those notices into
+something a person can actually follow.
 
-This project re-links those notices into something a person can actually follow.
+**Live (no login):** https://jimdc.github.io/city-record-money-map/
 
-## Why this matters: PASSPort vs. the public record
+> The repo slug is still `city-record-money-map` so the shared link keeps working; the product is
+> **CROL-List** everywhere it's read.
 
-NYC runs procurement through **[PASSPort](https://www.nyc.gov/site/mocs/passport/about-passport.page)**
-(the Mayor's Office of Contract Services vendor portal) — vendors enroll, get matched to opportunities,
-and respond there. But PASSPort is a gated workflow tool. The **City Record is the open, legal
-record of public notice**: every opportunity at or above $100,000 must be published there.
+## What it does — four lenses
 
-So the people who depend on the City Record are exactly the ones *not* wired into PASSPort — an
-outside consultant sizing up an agency, a journalist, a researcher, a small vendor who missed the
-portal alert. For them, a single RFP notice is nearly useless: it doesn't say how much that agency
-actually awards for this kind of work, who won last time, or whether an award ever landed.
+- **💵 Money** — follow a contract from **RFP → Intent to Award → Award ($)**, stitched by PIN, with how-to-respond (deadline, contact, PASSPort), filters, and CSV export. Plus a plain-English ("ask in English") search.
+- **👤 People** — decode any city job: official civil-service title, **competitive (exam) vs non-competitive**, salary band, and a career ladder. Or look up a person → appointment history + payroll.
+- **🏗 Land** — rezonings in plain English, cross-referenced to **ZAP** (applicant, what's being built, affordable housing, status) and pinned on a map.
+- **🔔 Alerts** — subscribe to a slice (e.g. "rezonings near 79 Rivington," "awards over $1M") and preview the email/SMS digest, with one-tap **✍ Respond** / **✉** / **☎** built from the notice's own data.
 
-## v0 — Follow the money (procurement)
+## Architecture — client-side, live data, no backend
 
-The live tool reads the City Record straight from NYC Open Data and, for any RFP, stitches the
-scattered notices that share a **Procurement Identification Number (PIN)** back into one chain:
+CROL-List is **one self-contained `index.html`**: inline CSS + vanilla JS, **no build step, no server,
+no API keys**. It opens with a double-click and is hosted on GitHub Pages as static files.
 
-> **Solicitation (RFP) → Intent to Award → Award ($)**
+**Every query is a live API call from the browser at runtime.** There is no cached bulk data, no
+scheduled download, and no copy of the datasets in this repo — so the data is always as fresh as the
+City publishes it (the City Record updates each business day). The browser calls, directly:
 
-Each box links back to the real notice in the City Record, and an agency context strip shows how
-much that agency has awarded on record — turning one isolated notice into a sense of the whole flow.
+```
+ ┌────────────── index.html (static, on GitHub Pages) ──────────────┐
+ │  vanilla JS  ──fetch()──►  NYC Open Data / Socrata SODA API       │
+ │                            • City Record   dg92-zbpx (daily)      │
+ │                            • Citywide Payroll  k397-673e          │
+ │                            • Civil Service List  vx8i-nprf        │
+ │                            • ZAP projects  hgx4-8ukb              │
+ │              ──fetch()──►  Planning Labs GeoSearch (geocoding)    │
+ │              ──tiles───►  Leaflet + CARTO basemap                 │
+ └──────────────────────────────────────────────────────────────────┘
+```
 
-**It's a single `index.html`** — vanilla JS, no build step, no backend. It fetches the public SODA
-API (CORS-open) directly from the browser, so it runs from a double-click or from GitHub Pages.
+This works because those APIs are **CORS-open and need no key**. The trade-off: the demo depends on
+those services being up at runtime (they are), and a few endpoints are rate-limited rather than keyed.
 
-## Roadmap — the other lenses
+The **only** data committed to the repo is two small *precomputed snapshots*, used as seed/reference
+(the People tab still computes its live results on the fly):
 
-The same "make the record legible" move applies across the paper:
-
-- **Follow the people** — *Changes in Personnel* is the single largest section of the City Record
-  (~955K notices), each carrying a name, title, action, and salary. Cross-referenced with
-  [Citywide Payroll Data](https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e),
-  it answers "who got appointed, and what does everyone in NYC get paid?"
-- **Follow the land** — City Planning rezoning / ULURP notices are unreadable legalese
-  (`R7-1 → R8`, MIH options, metes-and-bounds). Cross-referencing them to maps, addresses, and
-  applicants makes them intuitive.
+- `data/title_crosswalk.json` (~250 roles) and `data/people_examples.json` (~16 seed roles), with method notes.
 
 ## Data sources
 
-| Source | What it gives |
-|---|---|
-| [City Record Online — `dg92-zbpx`](https://data.cityofnewyork.us/City-Government/City-Record-Online/dg92-zbpx) | Every published notice (structured form of the printed paper) |
-| [Recent Contract Awards — `qyyg-4tf5`](https://data.cityofnewyork.us/City-Government/Recent-Contract-Awards/qyyg-4tf5) | Award detail derived from the City Record |
-| [Citywide Payroll Data — `k397-673e`](https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e) | Per-employee title, salary, and gross pay |
-| [Checkbook NYC](https://www.checkbooknyc.com/) | Actual dollars paid against contracts |
+| Source | ID / endpoint | Used by |
+|---|---|---|
+| City Record Online | `dg92-zbpx` (Socrata) | Money, People, Alerts |
+| Citywide Payroll | `k397-673e` | People |
+| Civil Service List | `vx8i-nprf` | People (exam status) |
+| ZAP Projects | `hgx4-8ukb` | Land, Alerts |
+| Planning Labs GeoSearch | `geosearch.planninglabs.nyc` | Land (geocoding) |
+| Checkbook NYC | `checkbooknyc.com/api` | *(roadmap — actual $ paid)* |
 
-## Honest caveats
+## Real vs. mock
 
-The underlying data is messy and the tool says so on its face: some notices carry placeholder
-PINs that can't be linked; some PINs are "blanket" codes bundling many unrelated awards; and raw
-contract amounts contain erroneous mega-values (agency totals exclude rows above $5B). Always
-confirm a figure against the [official City Record](https://a856-cityrecord.nyc.gov/) and
-[Checkbook NYC](https://www.checkbooknyc.com/).
+Most of the app is **real** (live queries, working CSV/.ics/mailto/tel). A few pieces are **honest
+mockups** for the demo — the alert *delivery*, the natural-language *model*, and the address→project
+*proximity*. What each needs to become real is written up in **[`PLAN.md`](PLAN.md)**.
 
 ## Run it
 
 ```
-open index.html      # or just double-click — no server, no build
+open index.html      # double-click — no server, no build, no keys
 ```
-
-Live: **https://jimdc.github.io/city-record-money-map**

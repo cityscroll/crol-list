@@ -226,7 +226,7 @@
       <p class="cr-sub">Official Journal of the City of New York &middot; Decoded</p>
     </div>
     <div class="cr-rule cr-rule--mid"></div>
-    <p class="cr-dateline"><span>Vol.&nbsp;CLIII</span><span class="cr-dot">&middot;</span><span>No.&nbsp;120</span><span class="cr-dot">&middot;</span><span>New&nbsp;York, <time datetime="2026-06-24">Wednesday, June&nbsp;24,&nbsp;2026</time></span></p>
+    <p class="cr-dateline" id="dateline"></p>
     <nav class="tabs">
       <button class="tabbtn active" data-tab="money">Money</button>
       <button class="tabbtn" data-tab="people">People</button>
@@ -445,6 +445,7 @@
 
 <footer>
   <div class="wrap">
+    <p style="margin:0 0 10px">The dateline marks the latest edition — but CROL-List searches <b>every City Record edition from 2003 to today</b> (1M+ notices), not a single issue.</p>
     <p>Sources:
       <a href="https://data.cityofnewyork.us/City-Government/City-Record-Online/dg92-zbpx" target="_blank" rel="noopener">City Record Online (dg92-zbpx)</a> ·
       <a href="https://data.cityofnewyork.us/City-Government/Citywide-Payroll-Data-Fiscal-Year-/k397-673e" target="_blank" rel="noopener">Citywide Payroll (k397-673e)</a> ·
@@ -1140,6 +1141,15 @@ $("#lkw").addEventListener("keydown", e=>{ if(e.key==="Enter") landSearch(); });
 ["#lboro","#lstatus"].forEach(s=>$(s).addEventListener("change", landSearch));
 
 $("#stamp").textContent = "Page loaded " + new Date().toISOString().slice(0,10) + ".";
+(function(){
+  const map=[[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+  const rom=n=>{let s="";for(const[v,r]of map){while(n>=v){s+=r;n-=v;}}return s;};
+  const now=new Date(); let n=0,d=new Date(now.getFullYear(),0,1);
+  while(d<=now){const wd=d.getDay();if(wd!==0&&wd!==6)n++;d.setDate(d.getDate()+1);}
+  const fmt=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  const el=$("#dateline");
+  if(el) el.innerHTML=`<span>Vol.&nbsp;${rom(now.getFullYear()-1873)}</span><span class="cr-dot">&middot;</span><span>No.&nbsp;${n}</span><span class="cr-dot">&middot;</span><span>New&nbsp;York, <time datetime="${now.toISOString().slice(0,10)}">${fmt}</time></span>`;
+})();
 loadAgencies();
 search();
 aWatchChange();
