@@ -181,6 +181,7 @@
   .fcard .fscope{font-size:13.5px;line-height:1.5;color:#4a4338}
   .fcard .factions{display:flex;flex-wrap:wrap;gap:7px;margin-top:auto;padding-top:4px}
   .fcard .factions .act{padding:7px 11px;font-size:12.5px}
+  .fcard .demoresult{cursor:default;border-style:dashed;white-space:normal}
 
   /* alerts */
   .afield{margin-bottom:14px}
@@ -1146,6 +1147,7 @@ function renderFeed(key, rows){
     let acts=`<a class="act" href="${REQ_URL(r.request_id)}" target="_blank" rel="noopener">↗ City Record</a>`;
     if(ev) acts+=`<button class="act" type="button" data-ev="${key}:${r.request_id}">📅 Add ${fdt(ev)}</button>`;
     if(addr) acts+=`<a class="act" href="https://www.google.com/maps/search/${encodeURIComponent(addr+' New York NY')}" target="_blank" rel="noopener">🗺 Map</a>`;
+    if(addr && key==="property") acts+=`<button class="act" type="button" data-demo="${r.request_id}">🏚 Still standing?</button>`;
     return `<div class="fcard" style="border-top-color:${cfg.topBorder}">
       <div class="ftype">${r.type_of_notice_description||""}${r.agency_name?" · "+r.agency_name:""}${ev?` · <b style="color:var(--ink)">${fdt(ev)}</b>`:""}</div>
       <div class="ftitle">${cleanText(r.short_title)||"(untitled)"}</div>
@@ -1155,6 +1157,23 @@ function renderFeed(key, rows){
     </div>`;
   }).join("");
   el.querySelectorAll("[data-ev]").forEach(b=>b.addEventListener("click",()=>{ const i=b.dataset.ev.indexOf(":"); downloadEventICS(feedRows[b.dataset.ev.slice(0,i)][b.dataset.ev.slice(i+1)]); }));
+  el.querySelectorAll("[data-demo]").forEach(b=>b.addEventListener("click",()=>checkDemolition(feedRows.property[b.dataset.demo], b)));
+}
+
+async function checkDemolition(r, btn){
+  if(!r||!r.street_address_1) return;
+  btn.textContent="… checking DOB"; btn.disabled=true;
+  const geo=await geocode(cleanText(r.street_address_1)+" New York NY");
+  if(!geo||!geo.bbl||!/^\d{10}$/.test(geo.bbl)){ btn.textContent="🏚 lot not resolved"; btn.disabled=false; return; }
+  const boro={"1":"MANHATTAN","2":"BRONX","3":"BROOKLYN","4":"QUEENS","5":"STATEN ISLAND"}[geo.bbl[0]]||"";
+  const blkIn=`'${String(parseInt(geo.bbl.slice(1,6),10))}','${geo.bbl.slice(1,6)}'`;
+  const lot4=geo.bbl.slice(6,10), lotIn=`'${String(parseInt(lot4,10))}','${lot4.padStart(5,"0")}','${lot4}'`;
+  let hit=null;
+  try{ const n=await api("https://data.cityofnewyork.us/resource/w9ak-ipjd.json",{"$select":"filing_status,job_type","$where":`borough='${boro}' AND block in(${blkIn}) AND lot in(${lotIn}) AND upper(job_type) like '%DEMOLITION%'`,"$limit":"1"}); if(n&&n[0]) hit={status:n[0].filing_status||n[0].job_type,src:"DOB NOW"}; }catch(e){}
+  if(!hit){ try{ const l=await api("https://data.cityofnewyork.us/resource/ic3t-wcy2.json",{"$select":"job_status_descrp,latest_action_date","$where":`borough='${boro}' AND block in(${blkIn}) AND lot in(${lotIn}) AND job_type='DM'`,"$order":"latest_action_date DESC","$limit":"1"}); if(l&&l[0]) hit={status:l[0].job_status_descrp,date:(l[0].latest_action_date||"").slice(0,10),src:"DOB"}; }catch(e){} }
+  const span=document.createElement("span"); span.className="act demoresult";
+  span.innerHTML = hit ? `🏚 Demolition: <b>${cleanText(hit.status)}</b>${hit.date?` (${hit.date})`:""} <span class="muted">· ${hit.src}</span>` : `✅ No demolition permit on this lot`;
+  btn.replaceWith(span);
 }
 
 function downloadEventICS(r){
