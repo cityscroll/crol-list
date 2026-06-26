@@ -65,6 +65,9 @@
   .wandchip:hover{border-color:var(--oxblood);color:var(--oxblood)}
   .nlbox{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin-top:18px;box-shadow:var(--shadow)}
   .nllabel{font-family:var(--font-sc);text-transform:uppercase;letter-spacing:.13em;font-size:12px;color:var(--ink-soft);display:block;margin-bottom:8px}
+  .nlworking{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-family:var(--font-sc);text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--oxblood)}
+  .nlworking .spark{font-size:15px;display:inline-block;animation:twinkle .9s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{opacity:.35;transform:scale(.8) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(18deg)}}
   .nlrow{display:flex;gap:10px;flex-wrap:wrap}
   .nlrow input{flex:1 1 320px;font:15px/1.3 var(--font-body);padding:10px 11px;border:1px solid var(--rule);border-radius:9px;background:#fff;color:var(--ink)}
   .qchip{display:inline-block;font-family:var(--font-sc);font-size:12px;letter-spacing:.04em;text-transform:uppercase;background:var(--paper-2);border:1px solid var(--rule);border-radius:6px;padding:5px 9px;margin:0 6px 6px 0;color:var(--ink-soft)}
@@ -259,7 +262,7 @@
     </div>
 
     <div class="nlbox">
-      <label class="nllabel">✨ Ask in plain English <span style="font-family:var(--font-caslon);font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted)">— prototype; here it's parsed on-device, in production a small model</span></label>
+      <label class="nllabel">✨ Ask in plain English</label>
       <div class="nlrow">
         <input type="text" id="nlq" value="I'm a construction company doing affordable housing — show contracts over $500k, no special requirements, deadline within 3 months.">
         <button id="nlgo">✨ Translate</button>
@@ -798,19 +801,21 @@ function parseNL(text){
   out.keywords=[...new Set(out.keywords)].slice(0,4);
   return out;
 }
-async function nlResolve(text){
+async function nlResolve(text, lens){
+  lens = lens || "money";
   // Prefer the model-backed worker when API is set; fall back to the on-device heuristic.
   if(API){
     try{
-      const r=await fetch(API.replace(/\/+$/,"")+"/nl",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+      const r=await fetch(API.replace(/\/+$/,"")+"/nl",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text, lens})});
       if(r.ok){const j=await r.json(); if(j&&j.filter&&!j.degraded) return {source:"model",...j.filter};}
     }catch(e){}
   }
-  return {source:"device",...parseNL(text)};
+  return {source:"device",...deviceParse(text, lens)};
 }
 async function nlTranslate(){
   const text=$("#nlq").value.trim(); if(!text) return;
-  const p=await nlResolve(text);
+  const btn=$("#nlgo"); if(btn) btn.disabled=true; $("#nltrans").innerHTML=nlWorkingHTML();
+  const p=await nlResolve(text, "money");
   const chips=[`<span class="qchip">notice = <b>open RFP</b></span>`];
   if(p.keywords.length) chips.push(`<span class="qchip">about <b>${p.keywords.join(" / ")}</b></span>`);
   if(p.agency) chips.push(`<span class="qchip">agency <b>${p.agency}</b></span>`);
@@ -822,10 +827,85 @@ async function nlTranslate(){
   const code=["type_of_notice = 'Solicitation'","due_date > today"+(dueMax?` AND due_date <= '${dueMax}'`:""),
     `$q ~ ${kwExpr}`, p.minAmount?`contract_amount >= ${p.minAmount}`:null,
     p.excludeSpecial?`selection_method NOT LIKE '%Special%'`:null].filter(Boolean).join("\nAND ");
-  const tag=p.source==="model"?`<span class="qchip" style="opacity:.65">decoded by Claude Haiku</span>`:`<span class="qchip" style="opacity:.65">on-device</span>`;
-  $("#nltrans").innerHTML=`<div style="margin:10px 0 2px">${chips.join("")}${tag}</div><div class="qcode">${code}</div>`;
+  if(btn) btn.disabled=false;
+  $("#nltrans").innerHTML=`<div style="margin:10px 0 2px">${chips.join("")}</div><div class="qcode">${code}</div>`;
   $("#mode").value="open"; $("#sort").value="deadline"; $("#kw").value=p.keywords.join(" ");
   search();
+}
+
+function nlWorkingHTML(){ return `<div class="nlworking"><span class="spark">✨</span><span>translating…</span></div>`; }
+
+function deviceParse(text, lens){
+  if(lens==="money") return parseNL(text);
+  const out={keywords:[]};
+  const low=" "+text.toLowerCase()+" ";
+  if(lens==="land"){
+    const boros=["Manhattan","Brooklyn","Queens","Bronx","Staten Island"];
+    out.boro=boros.find(b=>low.includes(" "+b.toLowerCase()+" "))||null;
+  }
+  const stop=new Set("the a an of in on for to and or with show me find list all near over under within new nyc city our your their about that this".split(" "));
+  out.keywords=[...new Set(text.toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>3&&!stop.has(w)))].slice(0,4);
+  return out;
+}
+
+const NL = {
+  people: {
+    placeholder:"e.g. paramedic roles, or look up someone named Rodriguez",
+    chips:f=>[ f.lookupType?`<span class="qchip">a <b>${f.lookupType==='person'?'person':'role'}</b></span>`:"",
+               (f.keywords&&f.keywords.length)?`<span class="qchip">about <b>${f.keywords.join(' / ')}</b></span>`:"" ],
+    apply:f=>{ if(f.lookupType){ $("#pmode").value=f.lookupType; $("#pmode").dispatchEvent(new Event("change")); }
+               $("#pkw").value=(f.keywords||[]).join(" "); pSearch(); }
+  },
+  land: {
+    placeholder:"e.g. rezonings in Brooklyn, affordable housing in the Bronx",
+    chips:f=>[ f.boro?`<span class="qchip">in <b>${f.boro}</b></span>`:"",
+               (f.keywords&&f.keywords.length)?`<span class="qchip">about <b>${f.keywords.join(' / ')}</b></span>`:"",
+               f.status==='all'?`<span class="qchip"><b>all</b> · incl. closed</span>`:"" ],
+    apply:f=>{ if(f.boro) $("#lboro").value=f.boro; if(f.status) $("#lstatus").value=f.status;
+               $("#lkw").value=(f.keywords||[]).join(" "); landSearch(); }
+  },
+  property: nlFeed("property","e.g. land in Queens, NYPD auction in Brooklyn"),
+  rules:    nlFeed("rules","e.g. sanitation rules, sidewalk café licensing"),
+  meetings: nlFeed("meetings","e.g. upcoming landmarks hearings, Brooklyn community board")
+};
+
+function nlFeed(key, placeholder){
+  return {
+    placeholder,
+    chips:f=>[ f.agency?`<span class="qchip">agency <b>${f.agency}</b></span>`:"",
+               (f.keywords&&f.keywords.length)?`<span class="qchip">about <b>${f.keywords.join(' / ')}</b></span>`:"",
+               (key==='meetings'&&f.when)?`<span class="qchip"><b>${f.when}</b></span>`:"" ],
+    apply:f=>{ if(key==='meetings'&&f.when){ const w=$("#meetingswhen"); if(w) w.value=f.when; }
+               $("#"+key+"kw").value=[...(f.keywords||[]), f.agency].filter(Boolean).join(" ");
+               loadSection(key); }
+  };
+}
+
+async function nlTranslateLens(lens){
+  const inp=$("#nlq-"+lens); if(!inp) return;
+  const text=inp.value.trim(); if(!text) return;
+  const btn=$("#nlgo-"+lens); if(btn) btn.disabled=true;
+  $("#nltrans-"+lens).innerHTML=nlWorkingHTML();
+  const f=await nlResolve(text, lens);
+  const chips=(NL[lens].chips(f)||[]).filter(Boolean);
+  $("#nltrans-"+lens).innerHTML=chips.length?`<div style="margin:10px 0 2px">${chips.join("")}</div>`:"";
+  if(btn) btn.disabled=false;
+  NL[lens].apply(f);
+}
+
+function injectNLBoxes(){
+  const tabs={people:"#tab-people",land:"#tab-land",property:"#tab-property",rules:"#tab-rules",meetings:"#tab-meetings"};
+  Object.entries(tabs).forEach(([lens,sel])=>{
+    const wrap=document.querySelector(sel+" .wrap"); if(!wrap) return;
+    const anchor=wrap.querySelector(".controls"); if(!anchor) return;
+    const box=document.createElement("div"); box.className="nlbox";
+    box.innerHTML='<label class="nllabel">✨ Ask in plain English</label>'+
+      '<div class="nlrow"><input type="text" id="nlq-'+lens+'" placeholder="'+NL[lens].placeholder+'">'+
+      '<button id="nlgo-'+lens+'">✨ Translate</button></div><div id="nltrans-'+lens+'"></div>';
+    anchor.parentNode.insertBefore(box, anchor);
+    $("#nlgo-"+lens).addEventListener("click",()=>nlTranslateLens(lens));
+    $("#nlq-"+lens).addEventListener("keydown",e=>{ if(e.key==="Enter") nlTranslateLens(lens); });
+  });
 }
 
 function exportCSV(){
@@ -1330,6 +1410,7 @@ function aSave(){
 $("#go").addEventListener("click", search);
 $("#nlgo").addEventListener("click", nlTranslate);
 $("#nlq").addEventListener("keydown", e=>{ if(e.key==="Enter") nlTranslate(); });
+injectNLBoxes();
 $("#export").addEventListener("click", exportCSV);
 soda({"$select":"min(start_date) as a, max(start_date) as b"}).then(r=>{ const el=$("#editionspan"); if(el&&r&&r[0]){ const f=s=>new Date(s).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}); el.textContent=f(r[0].a)+" – "+f(r[0].b); } }).catch(()=>{});
 $("#kw").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });

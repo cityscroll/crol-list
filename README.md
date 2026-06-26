@@ -8,7 +8,7 @@ hearings, and rezonings there. It's the city's daily newspaper of government, an
 read it: a dense stream of disconnected legal notices. **CROL-List** re-links those notices into
 something a person can actually follow.
 
-**Live (no login):** https://jimdc.github.io/crol-list/
+**Live (no login):** https://crol-list.jimdc.com/
 
 ## What it does — seven lenses
 
