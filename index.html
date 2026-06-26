@@ -514,7 +514,7 @@ const PAYFY = "2025";
 // on-device heuristic, Checkbook $-paid stays hidden, alerts are preview-only. Set to the
 // deployed worker URL (e.g. "https://crol-worker.netlify.app") to light up the model-backed
 // features; every one of them falls back to the static behavior if the worker is unreachable.
-const API = "";
+const API = "https://crol-worker.crol-worker.workers.dev";
 const REQ_URL = id => `https://a856-cityrecord.nyc.gov/RequestDetail/${encodeURIComponent(id)}`;
 const PASSPORT = "https://a0333-passportpublic.nyc.gov/";
 const STAGE_RANK = {"Solicitation":0,"Intent to Negotiate":1,"Vendor List":2,"Intent to Award":3,"Award":4};
