@@ -4,4 +4,5 @@ node_modules/
 # internal planning + ops notes — keep private, never on the public repo
 internal/
 tasks/
+backlog/
 *.local.md
