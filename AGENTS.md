@@ -108,6 +108,27 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **Interaction-gated states count:** the runtime guard seeds a pinned investigation item and
   walks `#investigation`; a new localStorage/hash-gated panel needs the guard walk extended
   or it will ship English silently (hotfix-2's lesson).
+- **Permalink panes (`#notice/`, `#vendor/`, `#agency/`, `#matter/`) have no `.tabbtn`**
+  (`syncTabAria()`'s comment explains why — they're reached only via permalink/pivot, never
+  the tablist). `rerenderForLang()`'s `.tabbtn.active` lookup returns `tab = null` while one
+  of these is showing, so a language switch WHILE VIEWING one silently left its chrome (glance
+  labels, action buttons, how-to-respond panel, permalink footer — all built once via `t()`
+  when `showNotice()`/`showVendor()`/etc. first ran) stuck in whatever language was active at
+  that moment (hotfix 3, 2026-07-13). Fresh direct loads of a `#notice/…` URL were never
+  actually broken — `window.LANG`/`STRINGS[lang]` are populated synchronously via i18n.js's
+  `document.write()` before the body's hash router runs — only the in-place-switch path was.
+  Fix: `rerenderForLang()` checks `.tabpane.active` for `tab-notice`/`tab-entity` and re-runs
+  `applyHash()` (which already knows how to dispatch back to the right `show*(id)`) instead of
+  falling into the tabbtn-keyed branches below it. The runtime guard's `run_notice_deep_link()`
+  (`test/functional/13_stray_english.py`) now pins both the fresh-load and switch-while-viewing
+  paths — it was a guard blind spot (no `#notice/` walk existed at all) as much as a code bug.
+  Separately, unrelated pre-existing gaps found while chasing this (do NOT conflate with the
+  above): `deadlineTag()`'s `_spellNum()` hardcodes English number words ("one".."nine") into
+  `closes_in_n_days` for any language when a deadline is 2-9 days out; `noticeFlags()`/
+  `awardContext()`'s anomaly-flag and "Context" panel text, and `fillAddressLinks()`'s
+  "This address elsewhere" panel, are hardcoded English with no `t()` calls at all. All three
+  are real gaps but out of this hotfix's class (render-ordering, not missing translations) —
+  worth their own pass.
 - **Content-zone carve-out for long-form/technical content:** `code`, `pre`, and `.chg-detail`
   are allowlisted content zones in `test/functional/assets/stray_english_allowlist.json`
   (technical/verbatim samples; changelog.html's per-release bullet lists and incident reports,
@@ -285,11 +306,11 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   [`board-notify`](https://github.com/jimdc/board-notify) (`github:` dep pinned to a commit
   SHA in `worker/package.json`, since it isn't on npm yet) — not code that lives in this
   repo. See `worker/README.md`'s "Board notifications" section. It's a maintainers-only
-  convenience, deliberately kept out-of-tree per the captain's ruling: a fork that never
+  convenience, deliberately kept out-of-tree by maintainer decision: a fork that never
   configures its secrets ships a working crol-list with the bridge simply switched off,
   which is the whole point of keeping crol-list cleanly cloneable. The `board-notify` GitHub
   App is live (app id 4288246, installed on cityscroll, installation id 146319774); its
-  one-click creation kit stays outside this repo, in the firstmate estate at
+  one-click creation kit stays outside this repo, in the maintainer's private tooling at
   `data/crol-appkit-h8/kit/` (`INSTALL.md` has the setup steps, for reference if the App
   ever needs recreating).
 
