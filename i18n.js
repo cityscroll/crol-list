@@ -81,11 +81,11 @@ const LANG_FILE_HASHES = {
   "zh-Hans": "9b00ce68",
   ru: "61096775",
   bn: "fe38b7a2",
-  ht: "bc37ae81",
+  ht: "d09bc231",
   ko: "e64e7e7f",
   fr: "db3f342c",
   pl: "243b8870",
-  ar: "1c1d4a42",
+  ar: "12502276",
   ur: "0a099f02",
 };
 
