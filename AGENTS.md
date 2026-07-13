@@ -155,13 +155,15 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   still unwritten — this is all still ad hoc per-language additions, not that card's scope.
 - **Cross-gate tension, readable-or-else + non-English content**: readable-or-else's Flesch-
   Kincaid extractor (`extract_visible_text`) has no `lang`-attribute awareness — it feeds
-  ALL visible page text (including a page's own zh-Hans/ru/ar/ur language-switcher button
-  labels) through the English-only syllable/sentence heuristic. Adding a language's native-
-  script button label can therefore nudge a page's measured grade by a hair with zero actual
-  change to English readability (index.html's baseline moved 14.809 → 14.881 when zh-Hans/ru
-  shipped, then → 14.906 when ar/ur shipped) — same class of "known interaction, not a
-  regression" as the ↗-icon case below; the baseline entry needs a hand-edit (the tool's own
-  `baseline` command refuses to raise a value) with the reasoning recorded in the commit, not
+  ALL visible page text (including a page's own language-switcher button labels, in every
+  shipping language's native script) through the English-only syllable/sentence heuristic.
+  Adding a language's native-script button label can therefore nudge a page's measured grade
+  by a hair with zero actual change to English readability (index.html's baseline moved
+  14.809 → 14.881 when zh-Hans/ru shipped, then → 15.02 when bn/ht/ko/fr/pl shipped, then →
+  15.04 when ar/ur shipped — about/data/stats/api/changelog moved by similar hairs each
+  round) — same class of "known interaction, not a regression" as the ↗-icon case below; the
+  baseline entry needs a hand-edit (the tool's own `baseline` command refuses to raise a
+  value) with the reasoning recorded in the commit, not
   prose simplification to compensate.
 
 ## RTL support (wave 8: ar + ur)
