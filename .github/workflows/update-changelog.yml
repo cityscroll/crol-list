@@ -29,13 +29,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          persist-credentials: true
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Write PR body to a file (avoids interpolating untrusted content into a shell command)
+      - name: Write PR body to a file (avoids substituting untrusted content into a shell command)
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
@@ -49,13 +49,15 @@ jobs:
             --body-file "$RUNNER_TEMP/pr-body.md"
 
       - name: Commit and push if the changelog changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git diff --quiet -- changelog-data.json changelog.html; then
             echo "No user-facing marker in this PR — nothing to commit."
             exit 0
           fi
-          git config user.name "crol-changelog-bot"
-          git config user.email "changelog-bot@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add changelog-data.json changelog.html
           git commit -m "changelog: PR #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
-          git push origin HEAD:main
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
