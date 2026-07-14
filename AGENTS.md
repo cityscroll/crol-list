@@ -401,11 +401,22 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   same "one source, generated projection" shape as `docs/architecture.md` → the kanban hub
   page, just applied to a changelog instead of an architecture doc.
 - **`.github/workflows/update-changelog.yml`** runs on `pull_request: types: [closed]` (merged
-  only), extracts the marker line, and pushes straight to `main` if the changelog changed. The
-  loop guard is the trigger *type*, not a flag: a direct `git push` never raises another
-  `pull_request closed` event, so the bot's own commit can't re-fire this workflow (it does
-  trigger `ci.yml`'s ordinary `push: branches: [main]` job, same as any other push — expected,
-  not a loop).
+  only) and extracts the marker line. `main` sits behind a merge-queue ruleset that rejects a
+  direct push even from the Actions token (bypass actors aren't permitted on it), so the
+  workflow instead force-pushes a standing bot branch (`bot/changelog-update`, always rebuilt
+  fresh from `main`'s current tip), opens or updates a PR from it, and enqueues that PR itself
+  via the `enqueuePullRequest` GraphQL mutation (needs `pull-requests: write` alongside
+  `contents: write`) rather than merging it directly.
+  **Loop guard, two layers.** (1) Trigger type: nothing this workflow does calls PR machinery
+  on `main` directly (no merge, no admin bypass), so it can't raise another
+  `pull_request closed` event itself. (2) Fixed point: the bot's own PR body
+  (`.github/changelog-bot-pr-body.md`) carries no `## What this means for you` section by
+  construction, so when THAT PR eventually merges through the queue, this same workflow runs
+  again, extracts nothing, and the explicit no-diff guard (byte-compare against the pre-
+  regeneration base, before any branch is touched) exits early — the chain always terminates
+  after one hop. If a second qualifying PR merges before the queue processes the first bot PR,
+  the next run reads the bot branch's own pending `changelog-data.json` as its base (not
+  `main`'s stale copy) and accumulates onto that same open PR instead of opening a duplicate.
 - **`.chg-auto` is a content-zone carve-out**, same posture as the pre-existing `.chg-detail`
   archival carve-out: entries are extracted verbatim from PR bodies at merge time, so they
   can't be pre-translated or guaranteed to pass the NYC copy lint — carved out of both

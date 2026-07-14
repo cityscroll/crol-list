@@ -8,7 +8,12 @@
 // real plumbing PR (a deploy-workflow addition) that should produce nothing.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { extractUserImpact } from "../tools/changelog_extract.mjs";
+
+const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 const PR_26_SUMMARY = `## Summary
 - The front-page notice count now says "today" explicitly (e.g. "36 notices today, from 16 agencies") instead of an unqualified count, so it's clear the number reflects today's notices without having to infer it from the dateline above.
@@ -70,4 +75,14 @@ test("collects a multi-line marker section up to the next heading or blank line"
     extractUserImpact(body),
     "First line of the statement, second line continues it."
   );
+});
+
+// The self-updating workflow's own convergence claim (see AGENTS.md's "Changelog" section
+// and .github/workflows/update-changelog.yml's header comment): the bot's PR body carries no
+// marker BY CONSTRUCTION, so its own eventual merge produces no new entry and the chain
+// terminates. This reads the real file the workflow ships (not a copy), so an edit that
+// accidentally introduces a marker section breaks this test immediately.
+test("the changelog bot's own PR body produces nothing (the loop's convergence point)", () => {
+  const botBody = fs.readFileSync(path.join(ROOT, ".github", "changelog-bot-pr-body.md"), "utf8");
+  assert.equal(extractUserImpact(botBody), null);
 });
