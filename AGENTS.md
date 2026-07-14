@@ -388,6 +388,39 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   and the `git-auto-commit-action` step from the tool's README before enabling it, and be aware
   of the BeautifulSoup-reserialization caveat above before pointing `fix` at real files in CI.
 
+## Changelog — self-updating from merged-PR marker sections
+
+- **`changelog.html`'s "Recent updates" list is generated, never hand-edited.** A PR marks
+  itself user-facing with a `## What this means for you` section in its body (any heading
+  level, case-insensitive — see `tools/changelog_extract.mjs`'s `extractUserImpact()`); a PR
+  with no such section is plumbing and gets no entry, by design, not oversight. Convention is
+  documented for contributors in `CONTRIBUTING.md`'s "Changelog entries" section.
+- **`changelog-data.json` is the source of truth**; the HTML block between the
+  `<!-- CHANGELOG:AUTO:START -->`/`<!-- CHANGELOG:AUTO:END -->` markers in `changelog.html` is
+  a full rebuild from that file every time (`tools/gen_changelog.mjs`), never hand-patched —
+  same "one source, generated projection" shape as `docs/architecture.md` → the kanban hub
+  page, just applied to a changelog instead of an architecture doc.
+- **`.github/workflows/update-changelog.yml`** runs on `pull_request: types: [closed]` (merged
+  only), extracts the marker line, and pushes straight to `main` if the changelog changed. The
+  loop guard is the trigger *type*, not a flag: a direct `git push` never raises another
+  `pull_request closed` event, so the bot's own commit can't re-fire this workflow (it does
+  trigger `ci.yml`'s ordinary `push: branches: [main]` job, same as any other push — expected,
+  not a loop).
+- **`.chg-auto` is a content-zone carve-out**, same posture as the pre-existing `.chg-detail`
+  archival carve-out: entries are extracted verbatim from PR bodies at merge time, so they
+  can't be pre-translated or guaranteed to pass the NYC copy lint — carved out of both
+  `test/functional/assets/stray_english_allowlist.json` (`content_zone_selectors`) and
+  `test/standards/nyc_copy_lint.py`'s skip-zone check. The list's own heading and disclosure
+  note (`chg_auto_h2`/`chg_auto_note`) are ordinary translated chrome, NOT inside the carve-out
+  — watch the class-name substring check in `nyc_copy_lint.py` if you rename anything (`"chg-
+  auto" in cls` would also match a sibling class literally named `chg-auto-*`, which is why the
+  disclosure note's class is `chgauto-note`, not `chg-auto-note`).
+- **Backfill vs. future entries**: the fourteen entries seeded 2026-07-11 through 2026-07-14
+  were hand-picked from `gh pr list --state merged` (pre-dating the marker convention) and
+  written as if each PR had carried the marker; every entry from here on is mechanical.
+- **Characterization tests**: `test/changelog_extract.test.mjs`, real merged-PR bodies
+  (crol-list #26 with an appended marker section, #33 verbatim with none).
+
 ## Alerts NL query — the combined parser, and the pure-module extraction pattern
 
 - **`nl_parse.js`** (repo root) holds `parseNL()` + its category dictionary

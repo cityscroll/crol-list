@@ -1,0 +1,61 @@
+# Regenerates changelog.html's "Recent updates" list on every PR merge, so no one hand-edits
+# the changelog. See CONTRIBUTING.md's "Changelog entries" section for the marker convention
+# a PR body needs, and tools/gen_changelog.mjs for the extraction + rebuild logic.
+#
+# Loop guard: this triggers on `pull_request: types: [closed]` — an event GitHub only fires
+# when a PR is actually opened/closed/merged through its PR machinery. The commit this
+# workflow pushes goes straight to `main` via `git push` (not through a PR), so it can never
+# raise another `pull_request closed` event and re-trigger itself. (It does trigger the
+# ordinary `ci.yml`'s `push: branches: [main]` job, same as any other push to main — that's
+# expected, not a loop, since that job doesn't touch the changelog.)
+name: Update changelog
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-changelog
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Write PR body to a file (avoids interpolating untrusted content into a shell command)
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+
+      - name: Extract this PR's user-impact line and regenerate the changelog
+        run: |
+          node tools/gen_changelog.mjs \
+            --number "${{ github.event.pull_request.number }}" \
+            --url "${{ github.event.pull_request.html_url }}" \
+            --merged-at "${{ github.event.pull_request.merged_at }}" \
+            --body-file "$RUNNER_TEMP/pr-body.md"
+
+      - name: Commit and push if the changelog changed
+        run: |
+          if git diff --quiet -- changelog-data.json changelog.html; then
+            echo "No user-facing marker in this PR — nothing to commit."
+            exit 0
+          fi
+          git config user.name "crol-changelog-bot"
+          git config user.email "changelog-bot@users.noreply.github.com"
+          git add changelog-data.json changelog.html
+          git commit -m "changelog: PR #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}"
+          git push origin HEAD:main
