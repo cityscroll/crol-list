@@ -2360,12 +2360,16 @@ async function aFetch(){
   return { kind:"rezone", rows: await api(ZAP, zp) };
 }
 
-// ---- match evidence: show why a keyword search notice is in the preview -------------------
+// ---- why-match evidence: show why a keyword search notice is in the preview ---------------
 // Mirrors worker/src/lib/digest.mjs's matchEvidence() -- the preview must show evidence for
 // the same reason the emailed digest does. Observed failure: a search for "education" surfaced
 // a Comptroller pension-fund notice -- "NOS - Equity Index Investment Management Products" --
 // with nothing visible explaining the match; the hit was buried in the notice's description,
 // which names the Board of Education Retirement System, one of the funds the notice covers.
+// The same mechanism (matchEvidence()/digTitleHTML()/digEvidenceHTML(), rendered via i18n.js's
+// "Matched: ..." string) is reused by moneyRowHTML()/landRowHTML()/feedCardHTML()/roleRowHTML()/
+// personRowHTML() below, so every lens result list -- not just this Alerts preview -- carries
+// the same why-match explanation.
 function locateAnyTerm(text, terms){
   const hay=String(text||"").toLowerCase(); let best=null;
   for(const term of terms){
