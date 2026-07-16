@@ -97,7 +97,7 @@ test("loadAuthorityAwards: excludes future dates before limiting recent official
   const loadAuthorityAwards = new Function(
     "authorityAwardSource", "todayISO", "api", "normalizeRecentAuthorityAwards",
     extractFn("loadAuthorityAwards") + "\nreturn loadAuthorityAwards;",
-  )(authorityAwardSource, () => "2026-07-16", async (_base, params) => {
+  )(authorityAwardSource, () => "2026-07-16T00:00:00", async (_base, params) => {
     query = params;
     return [{ award_date: "2026-07-15T00:00:00.000", vendor_name: "CURRENT VENDOR" }];
   }, normalizeRecentAuthorityAwards);
@@ -139,32 +139,56 @@ test("rankNychaAwardCandidates: rejects equal-date and non-agreement transaction
   assert.deepEqual(rankNychaAwardCandidates(notice, [equalDate, laterRelease]), []);
 });
 
-test("checkbookNychaByPin: queries Contracts_NYCHA and parses agreement-level fields", async () => {
-  let sentXml = "";
-  const response = `<response><status><result>success</result></status><contract_transactions>
-    <transaction><contract_id>C00042</contract_id><record_type>Agreement</record_type><pin>337474</pin>
+test("checkbookNychaByPin: paginates exact-PIN rows and keeps only agreements", async () => {
+  const sentXml = [];
+  const line = (id) => `<transaction><contract_id>${id}</contract_id><record_type>Line</record_type><pin>337474</pin></transaction>`;
+  const firstPage = Array.from({ length: 24 }, (_, i) => line(`L${i}`)).join("")
+    + `<transaction><contract_id>R00001</contract_id><record_type>Release</record_type><pin>337474</pin>
+      <approved_date>2026-04-01</approved_date></transaction>`;
+  const secondPage = `<transaction><contract_id>C00042</contract_id><record_type>Agreement</record_type><pin>337474</pin>
       <vendor>NELLIGAN WHITE ARCHITECTS PLLC</vendor><contract_current_amount>7310000.00</contract_current_amount>
       <approved_date>2025-03-01</approved_date><start_date>2025-02-15</start_date><award_method>SEALED BID</award_method>
       <purpose>DESIGN SERVICES</purpose></transaction>
-    <transaction><contract_id>C00042</contract_id><record_type>Line</record_type><pin>337474</pin></transaction>
-  </contract_transactions></response>`;
+    ${line("L25")}`;
   const checkbookNychaByPin = new Function(
     "API", "workerFetch", "DOMParser", "escXml",
     extractFn("checkbookNychaByPin") + "\nreturn checkbookNychaByPin;",
   )("https://api.crol-list.org", async (_path, opts) => {
-    sentXml = JSON.parse(opts.body).xml;
-    return { text: async () => response };
+    const xml = JSON.parse(opts.body).xml;
+    sentXml.push(xml);
+    const transactions = xml.includes("<records_from>1</records_from>") ? firstPage : secondPage;
+    return { text: async () => `<response><status><result>success</result></status><contract_transactions>${transactions}</contract_transactions></response>` };
   }, FakeDOMParser, escXml);
 
   const rows = await checkbookNychaByPin("337474");
-  assert.match(sentXml, /<type_of_data>Contracts_NYCHA<\/type_of_data>/);
-  assert.match(sentXml, /<value>337474<\/value>/);
-  assert.match(sentXml, /<name>record_type<\/name><type>value<\/type><value>Agreement<\/value>/);
+  assert.equal(sentXml.length, 2);
+  assert.match(sentXml[0], /<type_of_data>Contracts_NYCHA<\/type_of_data>/);
+  assert.match(sentXml[0], /<records_from>1<\/records_from>/);
+  assert.match(sentXml[1], /<records_from>26<\/records_from>/);
+  assert.match(sentXml[0], /<value>337474<\/value>/);
+  assert.doesNotMatch(sentXml[0], /<name>record_type<\/name>/);
   assert.deepEqual(rows, [{
     id: "C00042", pin: "337474", vendor: "NELLIGAN WHITE ARCHITECTS PLLC",
     amount: 7310000, invoiced: 0, start: "2025-02-15", end: "", approved: "2025-03-01",
     method: "SEALED BID", purpose: "DESIGN SERVICES", recordType: "Agreement",
   }]);
+});
+
+test("checkbookNychaByPin: fails closed when the bounded page limit is exhausted", async () => {
+  let calls = 0;
+  const fullPage = Array.from({ length: 25 }, (_, i) =>
+    `<transaction><contract_id>L${i}</contract_id><record_type>Line</record_type><pin>337474</pin></transaction>`
+  ).join("");
+  const checkbookNychaByPin = new Function(
+    "API", "workerFetch", "DOMParser", "escXml",
+    extractFn("checkbookNychaByPin") + "\nreturn checkbookNychaByPin;",
+  )("https://api.crol-list.org", async () => {
+    calls++;
+    return { text: async () => `<response><status><result>success</result></status><contract_transactions>${fullPage}</contract_transactions></response>` };
+  }, FakeDOMParser, escXml);
+
+  assert.equal(await checkbookNychaByPin("337474"), null);
+  assert.equal(calls, 8);
 });
 
 test("NYCHA award rendering keeps translated chrome outside the English vendor island", () => {

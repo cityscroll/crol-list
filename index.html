@@ -1496,7 +1496,7 @@ async function loadAuthorityAwards(agency){
   if(!source) return [];
   const base = `https://data.ny.gov/resource/${source.dataset}.json`;
   const q = source.authority.replace(/'/g,"''");
-  const asOf = todayISO();
+  const asOf = todayISO().slice(0,10);
   try{
     const rows = await api(base, {
       "$select":"authority_name,vendor_name,procurement_description,award_process,award_date,contract_amount",
@@ -3395,21 +3395,27 @@ async function checkbookByPin(pin){
 
 async function checkbookNychaByPin(pin){
   if(!API) return null;
-  const xml = `<request><type_of_data>Contracts_NYCHA</type_of_data><records_from>1</records_from><max_records>25</max_records><search_criteria>`
-    + `<criteria><name>pin</name><type>value</type><value>${escXml(pin)}</value></criteria>`
-    + `<criteria><name>record_type</name><type>value</type><value>Agreement</value></criteria>`
-    + `</search_criteria></request>`;
-  const r = await workerFetch("/checkbook", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({xml})}, 25000);
-  const doc = new DOMParser().parseFromString(await r.text(), "application/xml");
-  if((doc.querySelector("response > status > result")||{}).textContent !== "success") return null;
+  const pageSize = 25, maxPages = 8, agreements = [];
   const g = (el,tag)=>{ const n=el.getElementsByTagName(tag)[0]; return n ? n.textContent : ""; };
-  return [...doc.getElementsByTagName("transaction")].map(el=>({
-    id:g(el,"contract_id"), pin:g(el,"pin"), vendor:g(el,"vendor"),
-    amount:+g(el,"contract_current_amount")||+g(el,"contract_original_amount")||0,
-    invoiced:+g(el,"contract_invoiced_amount")||0,
-    start:g(el,"start_date"), end:g(el,"end_date"), approved:g(el,"approved_date"),
-    method:g(el,"award_method"), purpose:g(el,"purpose"), recordType:g(el,"record_type")
-  })).filter(c=>c.recordType === "Agreement");
+  for(let page=0; page<maxPages; page++){
+    const from = page * pageSize + 1;
+    const xml = `<request><type_of_data>Contracts_NYCHA</type_of_data><records_from>${from}</records_from><max_records>${pageSize}</max_records><search_criteria>`
+      + `<criteria><name>pin</name><type>value</type><value>${escXml(pin)}</value></criteria>`
+      + `</search_criteria></request>`;
+    const r = await workerFetch("/checkbook", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({xml})}, 25000);
+    const doc = new DOMParser().parseFromString(await r.text(), "application/xml");
+    if((doc.querySelector("response > status > result")||{}).textContent !== "success") return null;
+    const transactions = [...doc.getElementsByTagName("transaction")];
+    agreements.push(...transactions.map(el=>({
+      id:g(el,"contract_id"), pin:g(el,"pin"), vendor:g(el,"vendor"),
+      amount:+g(el,"contract_current_amount")||+g(el,"contract_original_amount")||0,
+      invoiced:+g(el,"contract_invoiced_amount")||0,
+      start:g(el,"start_date"), end:g(el,"end_date"), approved:g(el,"approved_date"),
+      method:g(el,"award_method"), purpose:g(el,"purpose"), recordType:g(el,"record_type")
+    })).filter(c=>c.recordType === "Agreement"));
+    if(transactions.length < pageSize) return agreements;
+  }
+  return null;
 }
 
 async function externalAwardForNotice(r, el){
