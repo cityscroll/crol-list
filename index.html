@@ -1496,13 +1496,14 @@ async function loadAuthorityAwards(agency){
   if(!source) return [];
   const base = `https://data.ny.gov/resource/${source.dataset}.json`;
   const q = source.authority.replace(/'/g,"''");
+  const asOf = todayISO();
   try{
     const rows = await api(base, {
       "$select":"authority_name,vendor_name,procurement_description,award_process,award_date,contract_amount",
-      "$where":`authority_name='${q}' AND award_date IS NOT NULL`,
+      "$where":`authority_name='${q}' AND award_date IS NOT NULL AND award_date <= '${asOf}T23:59:59.999'`,
       "$order":"award_date DESC", "$limit":"8"
     }, 12000);
-    return rows.map(normalizeAuthorityAward);
+    return normalizeRecentAuthorityAwards(rows, asOf);
   }catch(e){ return []; }
 }
 
@@ -3396,6 +3397,7 @@ async function checkbookNychaByPin(pin){
   if(!API) return null;
   const xml = `<request><type_of_data>Contracts_NYCHA</type_of_data><records_from>1</records_from><max_records>25</max_records><search_criteria>`
     + `<criteria><name>pin</name><type>value</type><value>${escXml(pin)}</value></criteria>`
+    + `<criteria><name>record_type</name><type>value</type><value>Agreement</value></criteria>`
     + `</search_criteria></request>`;
   const r = await workerFetch("/checkbook", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({xml})}, 25000);
   const doc = new DOMParser().parseFromString(await r.text(), "application/xml");
@@ -3407,7 +3409,7 @@ async function checkbookNychaByPin(pin){
     invoiced:+g(el,"contract_invoiced_amount")||0,
     start:g(el,"start_date"), end:g(el,"end_date"), approved:g(el,"approved_date"),
     method:g(el,"award_method"), purpose:g(el,"purpose"), recordType:g(el,"record_type")
-  })).filter(c=>c.recordType !== "Line");
+  })).filter(c=>c.recordType === "Agreement");
 }
 
 async function externalAwardForNotice(r, el){
@@ -3423,7 +3425,7 @@ async function externalAwardForNotice(r, el){
       <div class="stage-name">${t("mode_award")}</div><div class="when">${fdate(c.approved||c.start)}</div>
       <div class="bt" lang="en" dir="ltr">${escUiHtml(c.purpose)||t("untitled")}</div>
       ${money(c.amount)?`<div class="amt">${money(c.amount)}</div>`:""}
-      ${c.vendor?`<div class="vend" lang="en" dir="ltr">${t("awarded_to")} <b>${escUiHtml(c.vendor)}</b></div>`:""}
+      ${c.vendor?`<div class="vend">${t("awarded_to")} <b lang="en" dir="ltr">${escUiHtml(c.vendor)}</b></div>`:""}
       ${c.method?`<div class="rmeta" lang="en" dir="ltr">${escUiHtml(c.method)}</div>`:""}
     </div></div></div>
     <div class="pnote">${t("external_award_nycha_note_html",{pin:escUiHtml(r.pin)})}</div>`;

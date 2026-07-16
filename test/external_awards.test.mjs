@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import {
   authorityAwardSource,
   normalizeAuthorityAward,
+  normalizeRecentAuthorityAwards,
   rankNychaAwardCandidates,
 } from "../external_awards.js";
 
@@ -83,11 +84,36 @@ test("normalizeAuthorityAward: money and provenance survive the Socrata row shap
   });
 });
 
+test("normalizeRecentAuthorityAwards: excludes future-dated source errors before display", () => {
+  const current = { award_date: "2026-07-16T00:00:00.000", vendor_name: "CURRENT VENDOR" };
+  const future = { award_date: "2029-01-01T00:00:00.000", vendor_name: "FUTURE VENDOR" };
+  assert.deepEqual(normalizeRecentAuthorityAwards([future, current], "2026-07-16"), [
+    normalizeAuthorityAward(current),
+  ]);
+});
+
+test("loadAuthorityAwards: excludes future dates before limiting recent official rows", async () => {
+  let query = null;
+  const loadAuthorityAwards = new Function(
+    "authorityAwardSource", "todayISO", "api", "normalizeRecentAuthorityAwards",
+    extractFn("loadAuthorityAwards") + "\nreturn loadAuthorityAwards;",
+  )(authorityAwardSource, () => "2026-07-16", async (_base, params) => {
+    query = params;
+    return [{ award_date: "2026-07-15T00:00:00.000", vendor_name: "CURRENT VENDOR" }];
+  }, normalizeRecentAuthorityAwards);
+
+  const rows = await loadAuthorityAwards("Brooklyn Navy Yard Development Corp.");
+  assert.match(query.$where, /award_date <= '2026-07-16T23:59:59\.999'/);
+  assert.equal(query.$order, "award_date DESC");
+  assert.equal(query.$limit, "8");
+  assert.equal(rows[0].vendor, "CURRENT VENDOR");
+});
+
 test("rankNychaAwardCandidates: rejects the real stale PIN-reuse false positive", () => {
   const notice = { pin: "510394", start_date: "2025-05-01T00:00:00.000" };
   const stale = [{
     id: "PO1228767", pin: "510394", vendor: "KHUSHI CONSTRUCTION, INC.",
-    approved: "2012-12-05", start: "2012-12-05", amount: 2800,
+    approved: "2012-12-05", start: "2012-12-05", amount: 2800, recordType: "Agreement",
   }];
   assert.deepEqual(rankNychaAwardCandidates(notice, stale), []);
 });
@@ -96,10 +122,21 @@ test("rankNychaAwardCandidates: keeps and deduplicates a temporally valid exact-
   const notice = { pin: "337474", start_date: "2025-01-10T00:00:00.000" };
   const agreement = {
     id: "C00042", pin: "337474", vendor: "NELLIGAN WHITE ARCHITECTS PLLC",
-    approved: "2025-03-01", start: "2025-02-15", amount: 7310000,
+    approved: "2025-03-01", start: "2025-02-15", amount: 7310000, recordType: "Agreement",
   };
   const rows = [agreement, { ...agreement, amount: 0 }, { ...agreement, id: "C00043", approved: "2024-12-01" }];
   assert.deepEqual(rankNychaAwardCandidates(notice, rows), [agreement]);
+});
+
+test("rankNychaAwardCandidates: rejects equal-date and non-agreement transactions", () => {
+  const notice = { pin: "337474", start_date: "2025-01-10T00:00:00.000" };
+  const equalDate = {
+    id: "C00042", pin: "337474", approved: "2025-01-10T00:00:00.000", recordType: "Agreement",
+  };
+  const laterRelease = {
+    id: "C00043", pin: "337474", approved: "2025-03-01", recordType: "Release",
+  };
+  assert.deepEqual(rankNychaAwardCandidates(notice, [equalDate, laterRelease]), []);
 });
 
 test("checkbookNychaByPin: queries Contracts_NYCHA and parses agreement-level fields", async () => {
@@ -122,9 +159,15 @@ test("checkbookNychaByPin: queries Contracts_NYCHA and parses agreement-level fi
   const rows = await checkbookNychaByPin("337474");
   assert.match(sentXml, /<type_of_data>Contracts_NYCHA<\/type_of_data>/);
   assert.match(sentXml, /<value>337474<\/value>/);
+  assert.match(sentXml, /<name>record_type<\/name><type>value<\/type><value>Agreement<\/value>/);
   assert.deepEqual(rows, [{
     id: "C00042", pin: "337474", vendor: "NELLIGAN WHITE ARCHITECTS PLLC",
     amount: 7310000, invoiced: 0, start: "2025-02-15", end: "", approved: "2025-03-01",
     method: "SEALED BID", purpose: "DESIGN SERVICES", recordType: "Agreement",
   }]);
+});
+
+test("NYCHA award rendering keeps translated chrome outside the English vendor island", () => {
+  assert.match(indexSrc, /<div class="vend">\$\{t\("awarded_to"\)\} <b lang="en" dir="ltr">/);
+  assert.doesNotMatch(indexSrc, /<div class="vend" lang="en" dir="ltr">\$\{t\("awarded_to"\)\}/);
 });

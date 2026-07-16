@@ -38,15 +38,24 @@ function normalizeAuthorityAward(row) {
   };
 }
 
+function normalizeRecentAuthorityAwards(rows, asOfDate) {
+  var cutoff = String(asOfDate || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cutoff)) return [];
+  return (rows || []).filter(function (row) {
+    var awardDate = String(row && row.award_date || "").slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(awardDate) && awardDate <= cutoff;
+  }).map(normalizeAuthorityAward);
+}
+
 function rankNychaAwardCandidates(notice, rows) {
   var pin = String(notice && notice.pin || "").trim();
   var noticeAt = Date.parse(notice && notice.start_date || "");
   if (!pin || !Number.isFinite(noticeAt)) return [];
   var seen = new Set();
   return (rows || []).filter(function (row) {
-    if (String(row.pin || "").trim() !== pin || !row.id || seen.has(row.id)) return false;
+    if (row.recordType !== "Agreement" || String(row.pin || "").trim() !== pin || !row.id || seen.has(row.id)) return false;
     var contractAt = Date.parse(row.approved || row.start || "");
-    if (!Number.isFinite(contractAt) || contractAt < noticeAt) return false;
+    if (!Number.isFinite(contractAt) || contractAt <= noticeAt) return false;
     seen.add(row.id);
     return true;
   }).sort(function (a, b) {
@@ -60,6 +69,7 @@ if (typeof module !== "undefined" && module.exports !== undefined) {
     authorityAwardSource: authorityAwardSource,
     externalAwardMoney: externalAwardMoney,
     normalizeAuthorityAward: normalizeAuthorityAward,
+    normalizeRecentAuthorityAwards: normalizeRecentAuthorityAwards,
     rankNychaAwardCandidates: rankNychaAwardCandidates,
   };
 }
