@@ -1157,12 +1157,14 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **Guarded disclosure + case-specific empty state (crol-nearmatch-ux, 2026-07-16)**: the reveal
   used to render unconditionally on the empty state, so notices that structurally couldn't
   corroborate anything spun through a live SODA query and then said "nothing found."
-  `nearMatchPossible(r)` (index.html, just above `priorCycleNoneHTML()`) now gates it on exactly
-  what the tier hard-requires: a `start_date` (query and gap filter are both bounded to
-  strictly-earlier awards), >=2 significant title words (the 2-word `$q` can't form with fewer),
-  and a corroborating signal that could actually fire — a usable PIN whose renewal-stripped base
-  reaches `NEAR_MATCH_PIN_PREFIX_MIN_LEN` chars, or a positive `contract_amount`. Both "none"
-  call sites route through `priorCycleNoneHTML(r, rows)`, which also replaced the old hedged
+  #67 gated it on exactly what the near tier hard-requires: a `start_date` (query and gap filter
+  are both bounded to strictly-earlier awards), >=2 significant title words (the 2-word `$q` can't
+  form with fewer), and a corroborating signal that could actually fire — a usable PIN whose
+  renewal-stripped base reaches `NEAR_MATCH_PIN_PREFIX_MIN_LEN` chars, or a positive
+  `contract_amount`. (#67 did this with a predictive local `nearMatchPossible()`; the Phase 1b
+  swap below deleted that predicate — the `/priorcycle` endpoint now pre-computes the near set, so
+  the reveal simply shows when `near.length>0`.) Both "none"
+  call sites route through `priorCycleNoneHTML(r, eligibleCount, near)`, which also replaced the old hedged
   `prior_cycle_none_note` with the one specific reason the code can distinguish: too-generic
   title (`prior_cycle_none_generic`), zero prior-eligible candidates
   (`prior_cycle_none_no_candidates_html`), or near-misses below the strict 0.5 bar
