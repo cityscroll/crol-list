@@ -1301,10 +1301,31 @@ function priorCycleHTML(matches){
     <div class="note">${t("prior_cycle_heuristic_note")}</div>`;
 }
 
+// The near-match tier (rankNearMatchCandidates, below) hard-requires >=2 significant title
+// words (its own 2-word $q literally can't form with fewer) AND at least one corroborating
+// signal — a shared PIN prefix or a comparable contract amount. When neither can ever be true
+// for this notice, opening the reveal is a provable dead end, so don't offer it at all.
+function nearMatchPossible(r){
+  return priorCycleTitleWords(r.short_title).length >= 2 && (usablePin(r.pin) || Number(r.contract_amount) > 0);
+}
+
+// Resolves the disjunctive "we found nothing" case into the three specific reasons
+// priorCycleAwards can actually distinguish at render time, plus the near-match reveal when
+// nearMatchPossible() says it could still turn something up.
+function priorCycleNoneHTML(r, rowsCount){
+  let key;
+  if(priorCycleTitleWords(r.short_title).length < 2) key = "prior_cycle_none_generic";
+  else if(rowsCount === 0) key = "prior_cycle_none_no_candidates";
+  else key = "prior_cycle_none_low_confidence";
+  const note = `<div class="note">${t(key, {agency: cleanText(r.agency_name)})}</div>`;
+  if(!nearMatchPossible(r)) return note;
+  return note + nearMatchRevealHTML();
+}
+
 async function priorCycleAwards(r, el){
   if(!el || !r.agency_name || !cleanText(r.short_title)) return;
   const words = priorCycleTitleWords(r.short_title).slice(0, 6);
-  if(words.length < 2){ el.innerHTML = `<div class="note">${t("prior_cycle_none_note")}</div>${nearMatchRevealHTML()}`; wireNearMatchReveal(r, el); return; } // too generic a title to search on
+  if(words.length < 2){ el.innerHTML = priorCycleNoneHTML(r, 0); wireNearMatchReveal(r, el); return; } // too generic a title to search on; gate inside priorCycleNoneHTML keeps the reveal off here too
   let rows = null;
   try{
     rows = await soda({
@@ -1319,7 +1340,7 @@ async function priorCycleAwards(r, el){
   if(!rows) return; // proxy/network hiccup — say nothing rather than something wrong, same posture as followDollars
   const matches = rankPriorCycleCandidates(r, rows, {});
   if(matches.length){ el.innerHTML = priorCycleHTML(matches); return; }
-  el.innerHTML = `<div class="note">${t("prior_cycle_none_note")}</div>${nearMatchRevealHTML()}`;
+  el.innerHTML = priorCycleNoneHTML(r, rows.length);
   wireNearMatchReveal(r, el);
 }
 

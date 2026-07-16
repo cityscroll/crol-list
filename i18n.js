@@ -496,10 +496,13 @@ const STRINGS = {
     prior_cycle_heading: "Looks recurring — prior award cycles",
     prior_cycle_heuristic_note: "We matched this by agency and title, not by a shared PIN. It may be the same repeating contract, but we cannot be sure. Check the dates and vendor first.",
     prior_cycle_none_note: "We found no likely prior cycle for this one. It may not be a repeating contract. Or an earlier round did not match closely enough to show here.",
+    prior_cycle_none_generic: "This title is too generic to search for earlier rounds.",
+    prior_cycle_none_no_candidates: "No earlier {agency} award matches this title — most likely not a repeating contract (or an earlier round was titled differently).",
+    prior_cycle_none_low_confidence: "We found earlier {agency} awards, but none matched this title closely enough to be sure.",
     // Near-match prior cycles (w12-18): an exploratory second tier below the strict matcher
     // above, offered as an explicit reveal on the empty state — see rankNearMatchCandidates()/
     // nearMatchHTML() in index.html.
-    near_match_reveal_btn: "Show possible earlier rounds",
+    near_match_reveal_btn: "Look for looser possible matches",
     near_match_heading: "Possible earlier rounds",
     near_match_tag: "Maybe",
     near_match_why_lbl: "Why we're showing this:",
