@@ -5,7 +5,7 @@
       "pr": 70,
       "merged_at": "2026-07-17",
       "url": "https://github.com/cityscroll/crol-list/pull/70",
-      "text": "When you open a notice or agency profile for a public authority that files its contract awards outside the City Record — like the School Construction Authority, NYC Health + Hospitals, NYCHA, or the Economic Development Corporation — the site now checks the authority's own open-data filing and shows what it found there, naming and linking the source and when it was last updated. If an agency's awards genuinely aren't published anywhere as open data, the site now says so plainly instead of leaving you guessing."
+      "text": "Some agencies do not file awards in the City Record. They post them elsewhere. The site now checks. It looks at outside sources. It shows what it finds. It links to the source. If nothing turns up, it says so."
     },
     {
       "pr": 64,
