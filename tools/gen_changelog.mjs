@@ -126,7 +126,7 @@ function rewriteHtml(entries) {
 
 // Pure: given the current entries list and a candidate PR's body, decides whether it adds
 // a new entry — reused by both the real post-merge CLI (main(), below) and the pre-merge
-// simulation script (tools/simulate_changelog.mjs) so "what counts as harvestable" can never
+// simulation script (tools/check_changelog_reading_level.mjs) so "what counts as harvestable" can never
 // drift between the two call sites.
 export function computeEntryAddition(entries, { number, url, mergedAt, body }) {
   if (entries.some((e) => e.pr === number)) {
