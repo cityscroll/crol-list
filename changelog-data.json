@@ -5,13 +5,13 @@
       "pr": 74,
       "merged_at": "2026-07-17",
       "url": "https://github.com/cityscroll/crol-list/pull/74",
-      "text": "Following a link from a CROL-List digest email now shows *why* that notice was in your digest — the matching keyword highlighted in the title or a description snippet, plus a plain-language summary of your watch — instead of a bare notice page."
+      "text": "Click a link in a CROL-List digest email. You used to land on a bare notice page. Now you see why it matched. The matching word is highlighted. You also see a plain summary of your watch."
     },
     {
       "pr": 72,
       "merged_at": "2026-07-17",
       "url": "https://github.com/cityscroll/crol-list/pull/72",
-      "text": "If one of your saved alerts hasn't found anything new in a couple of months, its next email will say so and link you straight back to the alerts page with that exact search already loaded, so you can see what it's currently looking for and broaden it in one step."
+      "text": "Has a saved alert gone quiet? If it finds nothing new for a couple of months, its next email says so. That email links back to the alerts page. Your exact search is already loaded there. You can broaden it in one step."
     },
     {
       "pr": 73,
