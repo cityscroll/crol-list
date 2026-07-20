@@ -37,6 +37,12 @@
 # check run, so a workflow_dispatch-triggered CI run on the bot branch's head SHA satisfies
 # the same required checks a pull_request-triggered run would have. Once those pass, the
 # existing enqueuePullRequest call (moved to after the wait) succeeds on its own.
+#
+# The wait step polls the bot PR's own statusCheckRollup for the four REQUIRED check names
+# specifically, not the dispatched run's overall pass/fail — ci.yml's "functional" job (the
+# Playwright suite against live APIs) only runs on workflow_dispatch, is documented as
+# flaky, and isn't in the ruleset's required list; waiting on the whole run instead of the
+# named checks would let an unrelated flake in that job block an otherwise-mergeable PR.
 name: Update changelog
 
 on:
@@ -140,28 +146,49 @@ jobs:
 
       # See the file-header comment above for why this step exists: `pull_request`-triggered
       # CI on this branch would sit at "action_required" forever without a maintainer's click.
-      - name: Dispatch CI directly on the bot branch (workflow_dispatch bypasses the pull_request-event approval gate) and wait for it
+      - name: Dispatch CI directly on the bot branch (workflow_dispatch bypasses the pull_request-event approval gate) and wait for the required checks
         if: env.changed == 'true'
         timeout-minutes: 20
         run: |
           gh workflow run ci.yml --ref "$BOT_BRANCH"
+          PR_NUMBER="$(cat "$RUNNER_TEMP/bot-pr-number")"
 
-          RUN_ID=""
-          for i in $(seq 1 20); do
-            sleep 3
-            RUN_ID="$(gh run list --workflow ci.yml --branch "$BOT_BRANCH" --event workflow_dispatch \
-              --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
-            [ -n "$RUN_ID" ] && break
+          # Keep this list in sync with the "required_status_checks" contexts on main's
+          # ruleset (`gh api repos/OWNER/REPO/rules/branches/main`).
+          REQUIRED_CHECKS=(
+            "Unit tests (site + worker)"
+            "Accessibility + language gate (axe on every PR)"
+            "Stray-English guard (runtime, fixtures)"
+            "Reading-level ratchet gate (readable-or-else)"
+          )
+
+          ci_ok=false
+          for i in $(seq 1 80); do
+            sleep 15
+            ROLLUP="$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '.statusCheckRollup // []')"
+            all_done=true
+            all_green=true
+            for name in "${REQUIRED_CHECKS[@]}"; do
+              ENTRY="$(echo "$ROLLUP" | jq -c --arg n "$name" '[.[] | select(.name==$n)][0] // {}')"
+              status="$(echo "$ENTRY" | jq -r '.status // "PENDING"')"
+              conclusion="$(echo "$ENTRY" | jq -r '.conclusion // ""')"
+              if [ "$status" != "COMPLETED" ]; then
+                all_done=false
+              elif [ "$conclusion" != "SUCCESS" ]; then
+                all_green=false
+              fi
+            done
+            if [ "$all_done" = "true" ]; then
+              [ "$all_green" = "true" ] && ci_ok=true
+              break
+            fi
           done
 
-          if [ -z "$RUN_ID" ]; then
-            echo "::warning::couldn't find the dispatched CI run on $BOT_BRANCH within the poll window — leaving bot PR #$(cat "$RUNNER_TEMP/bot-pr-number") for manual review"
-            echo "ci_ok=false" >> "$GITHUB_ENV"
-          elif gh run watch "$RUN_ID" --exit-status; then
-            echo "CI run $RUN_ID passed on $BOT_BRANCH"
+          if [ "$ci_ok" = "true" ]; then
+            echo "Required checks passed on $BOT_BRANCH (PR #$PR_NUMBER)"
             echo "ci_ok=true" >> "$GITHUB_ENV"
           else
-            echo "::warning::CI run $RUN_ID failed on $BOT_BRANCH — leaving bot PR #$(cat "$RUNNER_TEMP/bot-pr-number") for manual review"
+            echo "::warning::required checks didn't all pass on $BOT_BRANCH within the poll window — leaving bot PR #$PR_NUMBER for manual review"
             echo "ci_ok=false" >> "$GITHUB_ENV"
           fi
 
