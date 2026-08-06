@@ -498,6 +498,16 @@
       "delivery_tier": "inline-at-build"
     },
     {
+      "id": "civil-service-titles",
+      "name": "NYC Civil Service Titles",
+      "source_contract_id": "civil-service-titles",
+      "status": "landed",
+      "join_keys": [],
+      "join_coverage": {},
+      "landing_page": "https://data.cityofnewyork.us/d/nzjr-3966",
+      "delivery_tier": "inline-at-build"
+    },
+    {
       "id": "community-district-boundaries",
       "name": "Community Districts",
       "source_contract_id": "community-district-boundaries",
@@ -799,6 +809,16 @@
       "join_coverage": {},
       "landing_page": "https://geosearch.planninglabs.nyc/",
       "delivery_tier": "live-only"
+    },
+    {
+      "id": "nyc-jobs-postings",
+      "name": "Jobs NYC Postings",
+      "source_contract_id": "nyc-jobs-postings",
+      "status": "landed",
+      "join_keys": [],
+      "join_coverage": {},
+      "landing_page": "https://data.cityofnewyork.us/d/kpav-sd4t",
+      "delivery_tier": "inline-at-build"
     },
     {
       "id": "nyc-rules-rss",
@@ -3242,7 +3262,7 @@
   ],
   "depot_refresh": {
     "observed_on": "2026-08-06",
-    "source_contracts_fingerprint": "a1be58e3d9049fed7dc3f26c37979f310351839215b1e175226afc4beaea2117",
+    "source_contracts_fingerprint": "bd657699820b161c41af0e34a442d161a6bc2e1858d9ff1da45623eeefd5610a",
     "materialized_crosswalks": 11,
     "candidate_crosswalks": 75,
     "class_changes": 0,
